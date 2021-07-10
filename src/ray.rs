@@ -1,9 +1,9 @@
 use crate::Float;
 use cgmath::{Point3, Vector3};
 
-struct Ray {
-    origin: Point3<Float>,
-    direction: Vector3<Float>,
+pub struct Ray {
+    pub origin: Point3<Float>,
+    pub direction: Vector3<Float>,
 }
 
 impl Ray {
