@@ -1,30 +1,9 @@
-use std::{fmt::Display, ops::Deref};
-
-use cgmath::{vec3, Vector3};
-
 type Float = f64;
 
-#[derive(Clone, Copy)]
-struct Color(pub Vector3<Float>);
+mod color;
 
-impl Deref for Color {
-    type Target = Vector3<Float>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Display for Color {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} {} {}",
-            (255.999 * self[0]) as usize,
-            (255.999 * self[1]) as usize,
-            (255.999 * self[2]) as usize
-        )
-    }
-}
+use cgmath::vec3;
+use color::Color;
 
 fn main() {
     const IMAGE_WIDTH: usize = 256;
