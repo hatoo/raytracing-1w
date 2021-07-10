@@ -3,11 +3,23 @@ type Float = f64;
 mod color;
 mod ray;
 
-use cgmath::{point3, prelude::*, vec3};
+use cgmath::{dot, point3, prelude::*, vec3, Point3};
 use color::Color;
 use ray::Ray;
 
+fn hit_sphere(center: &Point3<Float>, radius: Float, r: &Ray) -> bool {
+    let oc = r.origin - center;
+    let a = dot(r.direction, r.direction);
+    let b = 2.0 * dot(oc, r.direction);
+    let c = dot(oc, oc) - radius * radius;
+    let discriminant = b * b - 4.0 * a * c;
+    discriminant > 0.0
+}
+
 fn ray_color(ray: &Ray) -> Color {
+    if hit_sphere(&point3(0.0, 0.0, -1.0), 0.5, ray) {
+        return Color(vec3(1.0, 0.0, 0.0));
+    }
     let unit_direction = InnerSpace::normalize(ray.direction);
     let t = 0.5 * (unit_direction.y + 1.0);
     Color((1.0 - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0))
