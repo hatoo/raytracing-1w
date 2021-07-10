@@ -1,6 +1,7 @@
 type Float = f64;
 
 mod color;
+mod ray;
 
 use cgmath::vec3;
 use color::Color;
