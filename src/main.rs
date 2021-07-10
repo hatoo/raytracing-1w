@@ -3,22 +3,28 @@ type Float = f64;
 mod color;
 mod ray;
 
-use cgmath::{dot, point3, prelude::*, vec3, Point3};
+use cgmath::{dot, point3, prelude::*, vec3, Point3, Vector3};
 use color::Color;
 use ray::Ray;
 
-fn hit_sphere(center: &Point3<Float>, radius: Float, r: &Ray) -> bool {
+fn hit_sphere(center: &Point3<Float>, radius: Float, r: &Ray) -> Option<Float> {
     let oc = r.origin - center;
     let a = dot(r.direction, r.direction);
     let b = 2.0 * dot(oc, r.direction);
     let c = dot(oc, oc) - radius * radius;
     let discriminant = b * b - 4.0 * a * c;
-    discriminant > 0.0
+    if discriminant < 0.0 {
+        None
+    } else {
+        Some((-b - discriminant.sqrt()) / (2.0 * a))
+    }
 }
 
 fn ray_color(ray: &Ray) -> Color {
-    if hit_sphere(&point3(0.0, 0.0, -1.0), 0.5, ray) {
-        return Color(vec3(1.0, 0.0, 0.0));
+    if let Some(t) = hit_sphere(&point3(0.0, 0.0, -1.0), 0.5, ray) {
+        let n: Vector3<Float> =
+            InnerSpace::normalize(EuclideanSpace::to_vec(ray.at(t)) - vec3(0.0, 0.0, -1.0));
+        return Color(0.5 * vec3(n.x + 1.0, n.y + 1.0, n.z + 1.0));
     }
     let unit_direction = InnerSpace::normalize(ray.direction);
     let t = 0.5 * (unit_direction.y + 1.0);

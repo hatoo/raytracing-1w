@@ -1,6 +1,7 @@
 use crate::Float;
 use cgmath::{Point3, Vector3};
 
+#[derive(Debug)]
 pub struct Ray {
     pub origin: Point3<Float>,
     pub direction: Vector3<Float>,
