@@ -10,7 +10,7 @@ mod sphere;
 use cgmath::{point3, prelude::*, vec3};
 use color::Color;
 use hittable::Hittable;
-use math::random_vec3_in_unit_sphere;
+use math::{random_vec3_in_hemisphere, random_vec3_in_unit_sphere};
 use rand::prelude::*;
 use ray::Ray;
 
@@ -26,12 +26,10 @@ fn ray_color<H: Hittable + ?Sized>(
         return Color(vec3(0.0, 0.0, 0.0));
     }
     if let Some(hit_record) = world.hit(ray, 0.001, Float::INFINITY) {
-        let target = hit_record.position
-            + hit_record.normal
-            + InnerSpace::normalize(random_vec3_in_unit_sphere(rng));
+        let target = random_vec3_in_hemisphere(hit_record.normal, rng);
         let new_ray = Ray {
             origin: hit_record.position,
-            direction: target - hit_record.position,
+            direction: target - EuclideanSpace::to_vec(hit_record.position),
         };
         return Color(0.5 * ray_color(&new_ray, world, depth - 1, rng).0);
     }
