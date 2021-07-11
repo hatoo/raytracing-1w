@@ -1,5 +1,6 @@
 type Float = f64;
 
+mod camera;
 mod color;
 mod hittable;
 mod ray;
@@ -8,9 +9,10 @@ mod sphere;
 use cgmath::{point3, prelude::*, vec3};
 use color::Color;
 use hittable::Hittable;
+use rand::prelude::*;
 use ray::Ray;
 
-use crate::sphere::Sphere;
+use crate::{camera::Camera, sphere::Sphere};
 
 fn ray_color<H: Hittable + ?Sized>(ray: &Ray, h: &H) -> Color {
     if let Some(hit_record) = h.hit(ray, 0.0, Float::INFINITY) {
@@ -25,6 +27,7 @@ fn main() {
     const ASPECT_RATIO: Float = 16.0 / 9.0;
     const IMAGE_WIDTH: usize = 400;
     const IMAGE_HEIGHT: usize = (IMAGE_WIDTH as Float / ASPECT_RATIO) as usize;
+    const SAMPLES_PER_PIXEL: usize = 100;
 
     let world: Vec<Box<dyn Hittable>> = vec![
         Box::new(Sphere {
@@ -37,32 +40,26 @@ fn main() {
         }),
     ];
 
-    let viewport_height = 2.0;
-    let viewport_width = ASPECT_RATIO * viewport_height;
-    let focal_length = 1.0;
-
-    let origin = point3(0.0, 0.0, 0.0);
-    let horizontal = vec3(viewport_width, 0.0, 0.0);
-    let vertical = vec3(0.0, viewport_height, 0.0);
-    let lower_left_corner =
-        origin - horizontal / 2.0 - vertical / 2.0 - vec3(0.0, 0.0, focal_length);
+    let camera = Camera::default();
 
     println!("P3\n{} {}\n255", IMAGE_WIDTH, IMAGE_HEIGHT);
+
+    let mut rng = StdRng::from_entropy();
 
     for j in (0..IMAGE_HEIGHT).rev() {
         eprint!("\rScanlines remaining: {} ", j);
         for i in 0..IMAGE_WIDTH {
-            let u = i as Float / (IMAGE_WIDTH - 1) as Float;
-            let v = j as Float / (IMAGE_HEIGHT - 1) as Float;
+            let mut pixel_color = Color(vec3(0.0, 0.0, 0.0));
 
-            let ray = Ray {
-                origin,
-                direction: lower_left_corner + u * horizontal + v * vertical - origin,
-            };
+            for _ in 0..SAMPLES_PER_PIXEL {
+                let u = (i as Float + rng.gen::<Float>()) / (IMAGE_WIDTH - 1) as Float;
+                let v = (j as Float + rng.gen::<Float>()) / (IMAGE_HEIGHT - 1) as Float;
 
-            let color = ray_color(&ray, world.as_slice());
+                let ray = camera.get_ray(u, v);
+                pixel_color = Color(pixel_color.0 + ray_color(&ray, world.as_slice()).0);
+            }
 
-            println!("{}", color);
+            println!("{}", pixel_color.into_sampled(SAMPLES_PER_PIXEL));
         }
     }
 
