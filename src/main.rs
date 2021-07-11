@@ -1,7 +1,9 @@
 type Float = f64;
 
 mod color;
+mod hittable;
 mod ray;
+mod sphere;
 
 use cgmath::{dot, point3, prelude::*, vec3, Point3, Vector3};
 use color::Color;
@@ -55,12 +57,12 @@ fn main() {
             let u = i as Float / (IMAGE_WIDTH - 1) as Float;
             let v = j as Float / (IMAGE_HEIGHT - 1) as Float;
 
-            let r = Ray {
+            let ray = Ray {
                 origin,
                 direction: lower_left_corner + u * horizontal + v * vertical - origin,
             };
 
-            let color = ray_color(&r);
+            let color = ray_color(&ray);
 
             println!("{}", color);
         }

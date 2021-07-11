@@ -3,7 +3,7 @@ use std::{fmt::Display, ops::Deref};
 use crate::Float;
 use cgmath::Vector3;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Color(pub Vector3<Float>);
 
 impl Deref for Color {
