@@ -11,8 +11,14 @@ use crate::{
     MyRng,
 };
 
+#[derive(Debug, Clone)]
+pub struct Scatter {
+    pub color: Color,
+    pub ray: Ray,
+}
+
 pub trait Material: Debug {
-    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<(Color, Ray)>;
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter>;
 }
 
 #[derive(Debug)]
@@ -27,7 +33,7 @@ pub struct Metal {
 }
 
 impl Material for Lambertian {
-    fn scatter(&self, _ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<(Color, Ray)> {
+    fn scatter(&self, _ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
         let scatter_direction =
             hit_record.normal + InnerSpace::normalize(random_vec3_in_unit_sphere(rng));
 
@@ -42,7 +48,10 @@ impl Material for Lambertian {
             direction: scatter_direction,
         };
 
-        Some((self.albedo, scatterd))
+        Some(Scatter {
+            color: self.albedo,
+            ray: scatterd,
+        })
     }
 }
 
@@ -51,17 +60,17 @@ fn reflect(v: Vector3<Float>, n: Vector3<Float>) -> Vector3<Float> {
 }
 
 impl Material for Metal {
-    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<(Color, Ray)> {
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
         let reflected = reflect(ray.direction, hit_record.normal);
         let scatterd = reflected + self.fuzz * random_vec3_in_unit_sphere(rng);
         if dot(scatterd, hit_record.normal) > 0.0 {
-            Some((
-                self.albedo,
-                Ray {
+            Some(Scatter {
+                color: self.albedo,
+                ray: Ray {
                     origin: hit_record.position,
                     direction: scatterd,
                 },
-            ))
+            })
         } else {
             None
         }

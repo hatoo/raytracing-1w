@@ -14,6 +14,7 @@ use std::sync::Arc;
 use cgmath::{point3, prelude::*, vec3};
 use color::Color;
 use hittable::Hittable;
+use material::Scatter;
 use rand::prelude::*;
 use ray::Ray;
 
@@ -28,7 +29,11 @@ fn ray_color<H: Hittable + ?Sized>(ray: &Ray, world: &H, depth: usize, rng: &mut
         return Color(vec3(0.0, 0.0, 0.0));
     }
     if let Some(hit_record) = world.hit(ray, 0.001, Float::INFINITY) {
-        return if let Some((color, scatterd)) = hit_record.material.scatter(ray, &hit_record, rng) {
+        return if let Some(Scatter {
+            color,
+            ray: scatterd,
+        }) = hit_record.material.scatter(ray, &hit_record, rng)
+        {
             Color(
                 color
                     .0
