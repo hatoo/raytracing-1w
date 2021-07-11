@@ -25,7 +25,7 @@ fn ray_color<H: Hittable + ?Sized>(
     if depth == 0 {
         return Color(vec3(0.0, 0.0, 0.0));
     }
-    if let Some(hit_record) = world.hit(ray, 0.0, Float::INFINITY) {
+    if let Some(hit_record) = world.hit(ray, 0.001, Float::INFINITY) {
         let target = hit_record.position + hit_record.normal + random_vec3_in_unit_sphere(rng);
         let new_ray = Ray {
             origin: hit_record.position,

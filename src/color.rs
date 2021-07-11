@@ -47,9 +47,9 @@ impl Display for SampledColor {
         write!(
             f,
             "{} {} {}",
-            (256.0 * self[0].clamp(0.0, 0.999)) as usize,
-            (256.0 * self[1].clamp(0.0, 0.999)) as usize,
-            (256.0 * self[2].clamp(0.0, 0.999)) as usize
+            (256.0 * self[0].sqrt().clamp(0.0, 0.999)) as usize,
+            (256.0 * self[1].sqrt().clamp(0.0, 0.999)) as usize,
+            (256.0 * self[2].sqrt().clamp(0.0, 0.999)) as usize
         )
     }
 }
