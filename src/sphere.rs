@@ -1,13 +1,17 @@
+use std::sync::Arc;
+
 use cgmath::{dot, prelude::*, Point3};
 
 use crate::{
     hittable::{HitRecord, Hittable},
+    material::Material,
     Float,
 };
 
 pub struct Sphere {
     pub center: Point3<Float>,
     pub radius: Float,
+    pub material: Arc<Box<dyn Material>>,
 }
 
 impl Hittable for Sphere {
@@ -38,6 +42,7 @@ impl Hittable for Sphere {
             (position - self.center) / self.radius,
             root,
             ray,
+            self.material.clone(),
         ))
     }
 }

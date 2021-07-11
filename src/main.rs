@@ -1,37 +1,42 @@
 type Float = f64;
+type MyRng = StdRng;
 
 mod camera;
 mod color;
 mod hittable;
+mod material;
 mod math;
 mod ray;
 mod sphere;
 
+use std::sync::Arc;
+
 use cgmath::{point3, prelude::*, vec3};
 use color::Color;
 use hittable::Hittable;
-use math::{random_vec3_in_hemisphere, random_vec3_in_unit_sphere};
 use rand::prelude::*;
 use ray::Ray;
 
-use crate::{camera::Camera, sphere::Sphere};
+use crate::{
+    camera::Camera,
+    material::{Lambertian, Material, Metal},
+    sphere::Sphere,
+};
 
-fn ray_color<H: Hittable + ?Sized>(
-    ray: &Ray,
-    world: &H,
-    depth: usize,
-    rng: &mut impl Rng,
-) -> Color {
+fn ray_color<H: Hittable + ?Sized>(ray: &Ray, world: &H, depth: usize, rng: &mut MyRng) -> Color {
     if depth == 0 {
         return Color(vec3(0.0, 0.0, 0.0));
     }
     if let Some(hit_record) = world.hit(ray, 0.001, Float::INFINITY) {
-        let target = random_vec3_in_hemisphere(hit_record.normal, rng);
-        let new_ray = Ray {
-            origin: hit_record.position,
-            direction: target - EuclideanSpace::to_vec(hit_record.position),
+        return if let Some((color, scatterd)) = hit_record.material.scatter(ray, &hit_record, rng) {
+            Color(
+                color
+                    .0
+                    .mul_element_wise(ray_color(&scatterd, world, depth - 1, rng).0),
+            )
+        } else {
+            Color(vec3(0.0, 0.0, 0.0))
         };
-        return Color(0.5 * ray_color(&new_ray, world, depth - 1, rng).0);
     }
     let unit_direction = InnerSpace::normalize(ray.direction);
     let t = 0.5 * (unit_direction.y + 1.0);
@@ -45,14 +50,42 @@ fn main() {
     const SAMPLES_PER_PIXEL: usize = 100;
     const MAX_DEPTH: usize = 50;
 
+    let material_ground: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Color(vec3(0.8, 0.8, 0.0)),
+    }));
+
+    let material_center: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Color(vec3(0.7, 0.3, 0.3)),
+    }));
+
+    let material_left: Arc<Box<dyn Material>> = Arc::new(Box::new(Metal {
+        albedo: Color(vec3(0.8, 0.8, 0.8)),
+    }));
+
+    let material_right: Arc<Box<dyn Material>> = Arc::new(Box::new(Metal {
+        albedo: Color(vec3(0.8, 0.6, 0.2)),
+    }));
+
     let world: Vec<Box<dyn Hittable>> = vec![
-        Box::new(Sphere {
-            center: point3(0.0, 0.0, -1.0),
-            radius: 0.5,
-        }),
         Box::new(Sphere {
             center: point3(0.0, -100.5, -1.0),
             radius: 100.0,
+            material: material_ground,
+        }),
+        Box::new(Sphere {
+            center: point3(0.0, 0.0, -1.0),
+            radius: 0.5,
+            material: material_center,
+        }),
+        Box::new(Sphere {
+            center: point3(-1.0, 0.0, -1.0),
+            radius: 0.5,
+            material: material_left,
+        }),
+        Box::new(Sphere {
+            center: point3(1.0, 0.0, -1.0),
+            radius: 0.5,
+            material: material_right,
         }),
     ];
 
@@ -60,7 +93,7 @@ fn main() {
 
     println!("P3\n{} {}\n255", IMAGE_WIDTH, IMAGE_HEIGHT);
 
-    let mut rng = StdRng::from_entropy();
+    let mut rng = MyRng::from_entropy();
 
     for j in (0..IMAGE_HEIGHT).rev() {
         eprint!("\rScanlines remaining: {} ", j);

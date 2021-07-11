@@ -24,3 +24,14 @@ pub fn random_vec3_in_hemisphere(normal: Vector3<Float>, rng: &mut impl Rng) -> 
         -v
     }
 }
+
+pub trait IsNearZero {
+    fn is_near_zero(&self) -> bool;
+}
+
+impl IsNearZero for Vector3<Float> {
+    fn is_near_zero(&self) -> bool {
+        const S: Float = 1e-8;
+        self.x.abs() < S && self.y.abs() < S && self.z.abs() < S
+    }
+}

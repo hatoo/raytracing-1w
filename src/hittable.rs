@@ -1,13 +1,16 @@
-use crate::ray::Ray;
+use std::sync::Arc;
+
 use crate::Float;
+use crate::{material::Material, ray::Ray};
 use cgmath::{dot, Point3, Vector3};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct HitRecord {
     pub position: Point3<Float>,
     pub normal: Vector3<Float>,
     pub t: Float,
     pub front_face: bool,
+    pub material: Arc<Box<dyn Material>>,
 }
 
 impl HitRecord {
@@ -16,6 +19,7 @@ impl HitRecord {
         outward_normal: Vector3<Float>,
         t: Float,
         ray: &Ray,
+        material: Arc<Box<dyn Material>>,
     ) -> Self {
         let front_face = dot(ray.direction, outward_normal) < 0.0;
         let normal = if front_face {
@@ -29,6 +33,7 @@ impl HitRecord {
             normal,
             t,
             front_face,
+            material,
         }
     }
 }
