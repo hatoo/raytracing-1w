@@ -6,8 +6,8 @@ use crate::{
 };
 
 pub struct Sphere {
-    center: Point3<Float>,
-    radius: Float,
+    pub center: Point3<Float>,
+    pub radius: Float,
 }
 
 impl Hittable for Sphere {

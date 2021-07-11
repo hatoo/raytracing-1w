@@ -5,29 +5,16 @@ mod hittable;
 mod ray;
 mod sphere;
 
-use cgmath::{dot, point3, prelude::*, vec3, Point3, Vector3};
+use cgmath::{point3, prelude::*, vec3};
 use color::Color;
+use hittable::Hittable;
 use ray::Ray;
 
-fn hit_sphere(center: &Point3<Float>, radius: Float, r: &Ray) -> Option<Float> {
-    let oc = r.origin - center;
-    let a = InnerSpace::magnitude2(r.direction);
-    let half_b = dot(oc, r.direction);
-    let c = InnerSpace::magnitude2(oc) - radius * radius;
-    let discriminant = half_b * half_b - a * c;
+use crate::sphere::Sphere;
 
-    if discriminant < 0.0 {
-        None
-    } else {
-        Some((-half_b - discriminant.sqrt()) / a)
-    }
-}
-
-fn ray_color(ray: &Ray) -> Color {
-    if let Some(t) = hit_sphere(&point3(0.0, 0.0, -1.0), 0.5, ray) {
-        let n: Vector3<Float> =
-            InnerSpace::normalize(EuclideanSpace::to_vec(ray.at(t)) - vec3(0.0, 0.0, -1.0));
-        return Color(0.5 * vec3(n.x + 1.0, n.y + 1.0, n.z + 1.0));
+fn ray_color<H: Hittable + ?Sized>(ray: &Ray, h: &H) -> Color {
+    if let Some(hit_record) = h.hit(ray, 0.0, Float::INFINITY) {
+        return Color(0.5 * (hit_record.normal + vec3(1.0, 1.0, 1.0)));
     }
     let unit_direction = InnerSpace::normalize(ray.direction);
     let t = 0.5 * (unit_direction.y + 1.0);
@@ -38,6 +25,17 @@ fn main() {
     const ASPECT_RATIO: Float = 16.0 / 9.0;
     const IMAGE_WIDTH: usize = 400;
     const IMAGE_HEIGHT: usize = (IMAGE_WIDTH as Float / ASPECT_RATIO) as usize;
+
+    let world: Vec<Box<dyn Hittable>> = vec![
+        Box::new(Sphere {
+            center: point3(0.0, 0.0, -1.0),
+            radius: 0.5,
+        }),
+        Box::new(Sphere {
+            center: point3(0.0, -100.5, -1.0),
+            radius: 100.0,
+        }),
+    ];
 
     let viewport_height = 2.0;
     let viewport_width = ASPECT_RATIO * viewport_height;
@@ -62,7 +60,7 @@ fn main() {
                 direction: lower_left_corner + u * horizontal + v * vertical - origin,
             };
 
-            let color = ray_color(&ray);
+            let color = ray_color(&ray, world.as_slice());
 
             println!("{}", color);
         }

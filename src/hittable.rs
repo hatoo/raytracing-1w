@@ -37,7 +37,13 @@ pub trait Hittable {
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord>;
 }
 
-impl Hittable for [Box<dyn Hittable>] {
+impl Hittable for Box<dyn Hittable> {
+    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord> {
+        self.as_ref().hit(ray, t_min, t_max)
+    }
+}
+
+impl<T: Hittable> Hittable for [T] {
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord> {
         let mut hit_record = None;
         let mut closest_so_far = t_max;
