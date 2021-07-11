@@ -23,9 +23,9 @@ impl Hittable for Sphere {
         }
         let sqrtd = discriminant.sqrt();
 
-        let root = (-half_b - sqrtd) / a;
+        let mut root = (-half_b - sqrtd) / a;
         if root < t_min || t_max < root {
-            let root = (-half_b + sqrtd) / a;
+            root = (-half_b + sqrtd) / a;
             if root < t_min || t_max > root {
                 return None;
             }
@@ -33,10 +33,11 @@ impl Hittable for Sphere {
 
         let position = ray.at(root);
 
-        Some(HitRecord {
-            t: root,
+        Some(HitRecord::new(
             position,
-            normal: (position - self.center) / self.radius,
-        })
+            (position - self.center) / self.radius,
+            root,
+            ray,
+        ))
     }
 }
