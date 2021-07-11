@@ -9,14 +9,15 @@ use ray::Ray;
 
 fn hit_sphere(center: &Point3<Float>, radius: Float, r: &Ray) -> Option<Float> {
     let oc = r.origin - center;
-    let a = dot(r.direction, r.direction);
-    let b = 2.0 * dot(oc, r.direction);
-    let c = dot(oc, oc) - radius * radius;
-    let discriminant = b * b - 4.0 * a * c;
+    let a = InnerSpace::magnitude2(r.direction);
+    let half_b = dot(oc, r.direction);
+    let c = InnerSpace::magnitude2(oc) - radius * radius;
+    let discriminant = half_b * half_b - a * c;
+
     if discriminant < 0.0 {
         None
     } else {
-        Some((-b - discriminant.sqrt()) / (2.0 * a))
+        Some((-half_b - discriminant.sqrt()) / a)
     }
 }
 
