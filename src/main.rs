@@ -60,10 +60,12 @@ fn main() {
 
     let material_left: Arc<Box<dyn Material>> = Arc::new(Box::new(Metal {
         albedo: Color(vec3(0.8, 0.8, 0.8)),
+        fuzz: 0.3,
     }));
 
     let material_right: Arc<Box<dyn Material>> = Arc::new(Box::new(Metal {
         albedo: Color(vec3(0.8, 0.6, 0.2)),
+        fuzz: 1.0,
     }));
 
     let world: Vec<Box<dyn Hittable>> = vec![
