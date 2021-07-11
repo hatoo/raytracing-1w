@@ -26,7 +26,7 @@ impl Hittable for Sphere {
         let mut root = (-half_b - sqrtd) / a;
         if root < t_min || t_max < root {
             root = (-half_b + sqrtd) / a;
-            if root < t_min || t_max > root {
+            if root < t_min || t_max < root {
                 return None;
             }
         }
