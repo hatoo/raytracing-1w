@@ -40,7 +40,7 @@ fn ray_color<H: Hittable + ?Sized>(ray: &Ray, world: &H, depth: usize, rng: &mut
     }
     let unit_direction = InnerSpace::normalize(ray.direction);
     let t = 0.5 * (unit_direction.y + 1.0);
-    Color((1.0 - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0))
+    Color(vec3(1.0, 1.0, 1.0).lerp(vec3(0.5, 0.7, 1.0), t))
 }
 
 fn main() {
