@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
-use crate::Float;
-use cgmath::{dot, vec3, InnerSpace, Vector3};
+use crate::{texture::Texture, Float};
+use cgmath::{dot, vec3, InnerSpace, Point3, Vector3};
 use rand::Rng;
 
 use crate::{
@@ -20,11 +20,15 @@ pub struct Scatter {
 
 pub trait Material: Debug + Send + Sync {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter>;
+
+    fn emitted(&self, _u: Float, _v: Float, _p: Point3<Float>) -> Color {
+        Color(vec3(0.0, 0.0, 0.0))
+    }
 }
 
 #[derive(Debug)]
 pub struct Lambertian {
-    pub albedo: Color,
+    pub albedo: Box<dyn Texture>,
 }
 
 #[derive(Debug)]
@@ -33,8 +37,13 @@ pub struct Metal {
     pub fuzz: Float,
 }
 
+#[derive(Debug)]
+pub struct DiffuseLight {
+    pub emit: Box<dyn Texture>,
+}
+
 impl Material for Lambertian {
-    fn scatter(&self, _ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
         let scatter_direction =
             hit_record.normal + InnerSpace::normalize(random_vec3_in_unit_sphere(rng));
 
@@ -47,10 +56,13 @@ impl Material for Lambertian {
         let scatterd = Ray {
             origin: hit_record.position,
             direction: scatter_direction,
+            time: ray.time,
         };
 
         Some(Scatter {
-            color: self.albedo,
+            color: self
+                .albedo
+                .value(hit_record.u, hit_record.v, hit_record.position),
             ray: scatterd,
         })
     }
@@ -62,7 +74,7 @@ fn reflect(v: Vector3<Float>, n: Vector3<Float>) -> Vector3<Float> {
 
 impl Material for Metal {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
-        let reflected = reflect(ray.direction, hit_record.normal);
+        let reflected = reflect(InnerSpace::normalize(ray.direction), hit_record.normal);
         let scatterd = reflected + self.fuzz * random_vec3_in_unit_sphere(rng);
         if dot(scatterd, hit_record.normal) > 0.0 {
             Some(Scatter {
@@ -70,6 +82,7 @@ impl Material for Metal {
                 ray: Ray {
                     origin: hit_record.position,
                     direction: scatterd,
+                    time: ray.time,
                 },
             })
         } else {
@@ -121,7 +134,18 @@ impl Material for Dielectric {
             ray: Ray {
                 origin: hit_record.position,
                 direction: direction,
+                time: ray.time,
             },
         })
+    }
+}
+
+impl Material for DiffuseLight {
+    fn scatter(&self, _ray: &Ray, _hit_record: &HitRecord, _rng: &mut MyRng) -> Option<Scatter> {
+        None
+    }
+
+    fn emitted(&self, u: Float, v: Float, p: Point3<Float>) -> Color {
+        self.emit.value(u, v, p)
     }
 }

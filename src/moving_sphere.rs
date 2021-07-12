@@ -1,22 +1,32 @@
 use std::sync::Arc;
 
-use cgmath::{dot, prelude::*, vec3, Point3};
+use cgmath::{dot, vec3, EuclideanSpace, InnerSpace, Point3};
 
 use crate::{
-    aabb::AABB,
+    aabb::{surrounding_box, AABB},
     hittable::{HitRecord, Hittable},
     material::Material,
     math::sphere_uv,
     Float, MyRng,
 };
 
-pub struct Sphere {
-    pub center: Point3<Float>,
+pub struct MovingSphere {
+    pub center0: Point3<Float>,
+    pub center1: Point3<Float>,
+    pub time0: Float,
+    pub time1: Float,
     pub radius: Float,
     pub material: Arc<Box<dyn Material>>,
 }
 
-impl Hittable for Sphere {
+impl MovingSphere {
+    pub fn center(&self, time: Float) -> Point3<Float> {
+        self.center0
+            + ((time - self.time0) / (self.time1 - self.time0)) * (self.center1 - self.center0)
+    }
+}
+
+impl Hittable for MovingSphere {
     fn hit(
         &self,
         ray: &crate::ray::Ray,
@@ -24,7 +34,7 @@ impl Hittable for Sphere {
         t_max: Float,
         _rng: &mut MyRng,
     ) -> Option<HitRecord> {
-        let oc = ray.origin - self.center;
+        let oc = ray.origin - self.center(ray.time);
         let a = InnerSpace::magnitude2(ray.direction);
         let half_b = dot(oc, ray.direction);
         let c = InnerSpace::magnitude2(oc) - self.radius * self.radius;
@@ -44,7 +54,7 @@ impl Hittable for Sphere {
         }
 
         let position = ray.at(root);
-        let outward_normal = (position - self.center) / self.radius;
+        let outward_normal = (position - self.center(ray.time)) / self.radius;
         let (u, v) = sphere_uv(EuclideanSpace::from_vec(outward_normal));
 
         Some(HitRecord::new(
@@ -58,10 +68,17 @@ impl Hittable for Sphere {
         ))
     }
 
-    fn bounding_box(&self, _time0: Float, _time1: Float) -> Option<AABB> {
-        Some(AABB {
-            minimum: self.center - vec3(self.radius, self.radius, self.radius),
-            maximum: self.center + vec3(self.radius, self.radius, self.radius),
-        })
+    fn bounding_box(&self, time0: Float, time1: Float) -> Option<AABB> {
+        let box0 = AABB {
+            minimum: self.center(time0) - vec3(self.radius, self.radius, self.radius),
+            maximum: self.center(time0) + vec3(self.radius, self.radius, self.radius),
+        };
+
+        let box1 = AABB {
+            minimum: self.center(time1) - vec3(self.radius, self.radius, self.radius),
+            maximum: self.center(time1) + vec3(self.radius, self.radius, self.radius),
+        };
+
+        Some(surrounding_box(box0, box1))
     }
 }

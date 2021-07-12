@@ -5,6 +5,7 @@ use cgmath::{Point3, Vector3};
 pub struct Ray {
     pub origin: Point3<Float>,
     pub direction: Vector3<Float>,
+    pub time: Float,
 }
 
 impl Ray {

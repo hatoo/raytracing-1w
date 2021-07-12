@@ -13,6 +13,8 @@ pub struct Camera {
     v: Vector3<Float>,
     w: Vector3<Float>,
     lens_radius: Float,
+    time0: Float,
+    time1: Float,
 }
 
 impl Camera {
@@ -24,6 +26,8 @@ impl Camera {
         aspect_ratio: Float,
         aperture: Float,
         focus_dist: Float,
+        time0: Float,
+        time1: Float,
     ) -> Self {
         let theta: Rad<Float> = vfov.into();
         let h = (theta / 2.0).tan();
@@ -48,6 +52,8 @@ impl Camera {
             v,
             w,
             lens_radius: aperture / 2.0,
+            time0,
+            time1,
         }
     }
 
@@ -62,6 +68,7 @@ impl Camera {
                     - EuclideanSpace::to_vec(self.origin)
                     - offset,
             ),
+            time: rng.gen_range(self.time0..self.time1),
         }
     }
 }
