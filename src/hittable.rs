@@ -45,6 +45,11 @@ impl HitRecord {
     }
 }
 
+pub struct Translate {
+    pub hittable: Box<dyn Hittable>,
+    pub offset: Vector3<Float>,
+}
+
 pub trait Hittable: Send + Sync {
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord>;
     fn bounding_box(&self, time0: Float, time1: Float) -> Option<AABB>;
@@ -92,5 +97,34 @@ impl<T: Hittable> Hittable for [T] {
             }
         }
         b
+    }
+}
+
+impl Hittable for Translate {
+    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord> {
+        let moved = Ray {
+            origin: ray.origin - self.offset,
+            direction: ray.direction,
+            time: ray.time,
+        };
+
+        self.hittable.hit(&moved, t_min, t_max).map(|hit_record| {
+            HitRecord::new(
+                hit_record.position + self.offset,
+                hit_record.normal,
+                hit_record.t,
+                hit_record.u,
+                hit_record.v,
+                &moved,
+                hit_record.material,
+            )
+        })
+    }
+
+    fn bounding_box(&self, time0: Float, time1: Float) -> Option<AABB> {
+        self.hittable.bounding_box(time0, time1).map(|aabb| AABB {
+            minimum: aabb.minimum + self.offset,
+            maximum: aabb.maximum + self.offset,
+        })
     }
 }
