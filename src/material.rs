@@ -74,7 +74,7 @@ fn reflect(v: Vector3<Float>, n: Vector3<Float>) -> Vector3<Float> {
 
 impl Material for Metal {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
-        let reflected = reflect(ray.direction, hit_record.normal);
+        let reflected = reflect(InnerSpace::normalize(ray.direction), hit_record.normal);
         let scatterd = reflected + self.fuzz * random_vec3_in_unit_sphere(rng);
         if dot(scatterd, hit_record.normal) > 0.0 {
             Some(Scatter {

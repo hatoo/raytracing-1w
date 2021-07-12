@@ -757,7 +757,7 @@ fn main() {
         _ => {
             aspect_ratio = 1.0;
             image_width = 800;
-            samples_per_pixel = 200;
+            samples_per_pixel = 10000;
             (
                 final_scene(&mut rng),
                 Color(vec3(0.0, 0.0, 0.0)),
