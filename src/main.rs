@@ -33,9 +33,8 @@ use crate::{
     color::SampledColor,
     material::{Dielectric, Lambertian, Material, Metal},
     moving_sphere::MovingSphere,
-    perlin::Perlin256,
     sphere::Sphere,
-    texture::{CheckerTexture, SolidColor},
+    texture::{CheckerTexture, NoiseTexture256, SolidColor},
 };
 
 fn ray_color<H: Hittable + ?Sized>(ray: &Ray, world: &H, depth: usize, rng: &mut MyRng) -> Color {
@@ -197,7 +196,7 @@ fn two_spheres(rng: &mut impl Rng) -> BVHNode {
 
 fn two_perlin_spheres(rng: &mut impl Rng) -> BVHNode {
     let pertext: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(Perlin256::new(rng)),
+        albedo: Box::new(NoiseTexture256::new(4.0, rng)),
     }));
 
     let world: Vec<Box<dyn Hittable>> = vec![

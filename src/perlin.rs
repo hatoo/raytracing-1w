@@ -11,8 +11,6 @@ pub struct Perlin<const POINT_COUNT: usize> {
     perm_z: [usize; POINT_COUNT],
 }
 
-pub type Perlin256 = Perlin<256>;
-
 impl<const POINT_COUNT: usize> Perlin<POINT_COUNT> {
     fn generate_perm(rng: &mut impl Rng) -> [usize; POINT_COUNT] {
         let mut p = [0; POINT_COUNT];
