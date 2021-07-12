@@ -2,6 +2,7 @@ type Float = f64;
 type MyRng = StdRng;
 
 mod aabb;
+mod aabox;
 mod aarect;
 mod bvd;
 mod camera;
@@ -30,6 +31,7 @@ use ray::Ray;
 use rayon::prelude::*;
 
 use crate::{
+    aabox::AABox,
     aarect::{XYRect, XZRect, YZRect},
     bvd::BVHNode,
     camera::Camera,
@@ -351,8 +353,20 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
             y0: 0.0,
             y1: 555.0,
             k: 555.0,
-            material: white,
+            material: white.clone(),
         }),
+        Box::new(AABox::new(
+            point3(130.0, 0.0, 65.0),
+            point3(295.0, 165.0, 230.0),
+            white.clone(),
+            rng,
+        )),
+        Box::new(AABox::new(
+            point3(265.0, 0.0, 295.0),
+            point3(430.0, 330.0, 460.0),
+            white.clone(),
+            rng,
+        )),
     ];
 
     BVHNode::new(world, 0.0, 1.0, rng)
