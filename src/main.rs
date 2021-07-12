@@ -9,6 +9,7 @@ mod hittable;
 mod material;
 mod math;
 mod moving_sphere;
+mod perlin;
 mod ray;
 mod sphere;
 mod texture;
@@ -32,6 +33,7 @@ use crate::{
     color::SampledColor,
     material::{Dielectric, Lambertian, Material, Metal},
     moving_sphere::MovingSphere,
+    perlin::Perlin256,
     sphere::Sphere,
     texture::{CheckerTexture, SolidColor},
 };
@@ -193,6 +195,27 @@ fn two_spheres(rng: &mut impl Rng) -> BVHNode {
     BVHNode::new(world, 0.0, 1.0, rng)
 }
 
+fn two_perlin_spheres(rng: &mut impl Rng) -> BVHNode {
+    let pertext: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Box::new(Perlin256::new(rng)),
+    }));
+
+    let world: Vec<Box<dyn Hittable>> = vec![
+        Box::new(Sphere {
+            center: point3(0.0, -1000.0, 0.0),
+            radius: 1000.0,
+            material: pertext.clone(),
+        }),
+        Box::new(Sphere {
+            center: point3(0.0, 2.0, 0.0),
+            radius: 2.0,
+            material: pertext.clone(),
+        }),
+    ];
+
+    BVHNode::new(world, 0.0, 1.0, rng)
+}
+
 fn main() {
     const ASPECT_RATIO: Float = 16.0 / 9.0;
     const IMAGE_WIDTH: usize = 400;
@@ -202,7 +225,7 @@ fn main() {
 
     let mut rng = MyRng::from_entropy();
 
-    let (world, look_from, look_at, vfov, aperture) = match 1 {
+    let (world, look_from, look_at, vfov, aperture) = match 2 {
         0 => (
             random_scene(&mut rng),
             point3(13.0, 2.0, 3.0),
@@ -210,8 +233,15 @@ fn main() {
             Deg(20.0),
             0.1,
         ),
-        _ => (
+        1 => (
             two_spheres(&mut rng),
+            point3(13.0, 2.0, 3.0),
+            point3(0.0, 0.0, 0.0),
+            Deg(20.0),
+            0.0,
+        ),
+        _ => (
+            two_perlin_spheres(&mut rng),
             point3(13.0, 2.0, 3.0),
             point3(0.0, 0.0, 0.0),
             Deg(20.0),
