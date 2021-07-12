@@ -6,6 +6,7 @@ mod color;
 mod hittable;
 mod material;
 mod math;
+mod moving_sphere;
 mod ray;
 mod sphere;
 
@@ -26,6 +27,7 @@ use crate::{
     camera::Camera,
     color::SampledColor,
     material::{Dielectric, Lambertian, Material, Metal},
+    moving_sphere::MovingSphere,
     sphere::Sphere,
 };
 
@@ -74,15 +76,19 @@ fn random_scene(rng: &mut impl Rng) -> Vec<Box<dyn Hittable>> {
             );
 
             if InnerSpace::magnitude(center - point3(4.0, 0.2, 0.0)) > 0.9 {
-                let hittable = match choose_mat {
+                let hittable: Box<dyn Hittable> = match choose_mat {
                     x if x < 0.8 => {
                         let albedo =
                             Color(rng.gen::<Color>().0.mul_element_wise(rng.gen::<Color>().0));
+                        let center2 = center + vec3(0.0, rng.gen_range(0.0..0.5), 0.0);
                         let material: Arc<Box<dyn Material>> =
                             Arc::new(Box::new(Lambertian { albedo }));
-                        Box::new(Sphere {
-                            center,
-                            radius: 0.3,
+                        Box::new(MovingSphere {
+                            center0: center,
+                            center1: center2,
+                            time0: 0.0,
+                            time1: 1.0,
+                            radius: 0.2,
                             material,
                         })
                     }
@@ -143,10 +149,10 @@ fn random_scene(rng: &mut impl Rng) -> Vec<Box<dyn Hittable>> {
 }
 
 fn main() {
-    const ASPECT_RATIO: Float = 3.0 / 2.0;
-    const IMAGE_WIDTH: usize = 1200;
+    const ASPECT_RATIO: Float = 16.0 / 9.0;
+    const IMAGE_WIDTH: usize = 400;
     const IMAGE_HEIGHT: usize = (IMAGE_WIDTH as Float / ASPECT_RATIO) as usize;
-    const SAMPLES_PER_PIXEL: usize = 500;
+    const SAMPLES_PER_PIXEL: usize = 100;
     const MAX_DEPTH: usize = 50;
 
     let mut rng = MyRng::from_entropy();
@@ -167,6 +173,8 @@ fn main() {
         ASPECT_RATIO,
         aperture,
         dist_to_focus,
+        0.0,
+        1.0,
     );
 
     println!("P3\n{} {}\n255", IMAGE_WIDTH, IMAGE_HEIGHT);

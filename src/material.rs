@@ -34,7 +34,7 @@ pub struct Metal {
 }
 
 impl Material for Lambertian {
-    fn scatter(&self, _ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
         let scatter_direction =
             hit_record.normal + InnerSpace::normalize(random_vec3_in_unit_sphere(rng));
 
@@ -47,6 +47,7 @@ impl Material for Lambertian {
         let scatterd = Ray {
             origin: hit_record.position,
             direction: scatter_direction,
+            time: ray.time,
         };
 
         Some(Scatter {
@@ -70,6 +71,7 @@ impl Material for Metal {
                 ray: Ray {
                     origin: hit_record.position,
                     direction: scatterd,
+                    time: ray.time,
                 },
             })
         } else {
@@ -121,6 +123,7 @@ impl Material for Dielectric {
             ray: Ray {
                 origin: hit_record.position,
                 direction: direction,
+                time: ray.time,
             },
         })
     }
