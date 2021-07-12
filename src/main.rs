@@ -2,6 +2,7 @@ type Float = f64;
 type MyRng = StdRng;
 
 mod aabb;
+mod bvd;
 mod camera;
 mod color;
 mod hittable;
@@ -25,6 +26,7 @@ use ray::Ray;
 use rayon::prelude::*;
 
 use crate::{
+    bvd::BVHNode,
     camera::Camera,
     color::SampledColor,
     material::{Dielectric, Lambertian, Material, Metal},
@@ -56,7 +58,7 @@ fn ray_color<H: Hittable + ?Sized>(ray: &Ray, world: &H, depth: usize, rng: &mut
     Color(vec3(1.0, 1.0, 1.0).lerp(vec3(0.5, 0.7, 1.0), t))
 }
 
-fn random_scene(rng: &mut impl Rng) -> Vec<Box<dyn Hittable>> {
+fn random_scene(rng: &mut impl Rng) -> BVHNode {
     let ground_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
         albedo: Color(vec3(0.5, 0.5, 0.5)),
     }));
@@ -146,7 +148,7 @@ fn random_scene(rng: &mut impl Rng) -> Vec<Box<dyn Hittable>> {
         })),
     }));
 
-    world
+    BVHNode::new(world, 0.0, 1.0, rng)
 }
 
 fn main() {
@@ -197,10 +199,8 @@ fn main() {
                         let v = (j as Float + rng.gen::<Float>()) / (IMAGE_HEIGHT - 1) as Float;
 
                         let ray = camera.get_ray(u, v, &mut rng);
-                        pixel_color = Color(
-                            pixel_color.0
-                                + ray_color(&ray, world.as_slice(), MAX_DEPTH, &mut rng).0,
-                        );
+                        pixel_color =
+                            Color(pixel_color.0 + ray_color(&ray, &world, MAX_DEPTH, &mut rng).0);
                     }
 
                     pixel_color.into_sampled(SAMPLES_PER_PIXEL)
