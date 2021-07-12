@@ -510,6 +510,172 @@ fn cornel_smoke(rng: &mut impl Rng) -> BVHNode {
     BVHNode::new(world, 0.0, 1.0, rng)
 }
 
+fn final_scene(rng: &mut impl Rng) -> BVHNode {
+    let ground: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Box::new(SolidColor {
+            color_value: Color(vec3(0.48, 0.83, 0.53)),
+        }),
+    }));
+
+    const BOXES_PER_SIDE: usize = 20;
+
+    let mut boxes1: Vec<Box<dyn Hittable>> = Vec::new();
+
+    for i in 0..BOXES_PER_SIDE {
+        for j in 0..BOXES_PER_SIDE {
+            let w = 100.0;
+            let x0 = -1000.0 + i as Float * w;
+            let z0 = -1000.0 + j as Float * w;
+            let y0 = 0.0;
+            let x1 = x0 + w;
+            let y1 = rng.gen_range(1.0..101.0);
+            let z1 = z0 + w;
+
+            boxes1.push(Box::new(AABox::new(
+                point3(x0, y0, z0),
+                point3(x1, y1, z1),
+                ground.clone(),
+                rng,
+            )));
+        }
+    }
+
+    let mut objects: Vec<Box<dyn Hittable>> = vec![Box::new(BVHNode::new(boxes1, 0.0, 1.0, rng))];
+
+    let light: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
+        emit: Box::new(SolidColor {
+            color_value: Color(vec3(7.0, 7.0, 7.0)),
+        }),
+    }));
+
+    objects.push(Box::new(XZRect {
+        x0: 123.0,
+        x1: 423.0,
+        z0: 147.0,
+        z1: 412.0,
+        k: 554.0,
+        material: light,
+    }));
+
+    let center1 = point3(400.0, 400.0, 200.0);
+    let center2 = center1 + vec3(30.0, 0.0, 0.0);
+
+    let moving_sphere_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Box::new(SolidColor {
+            color_value: Color(vec3(0.7, 0.3, 0.1)),
+        }),
+    }));
+
+    objects.push(Box::new(MovingSphere {
+        center0: center1,
+        center1: center2,
+        time0: 0.0,
+        time1: 1.0,
+        radius: 50.0,
+        material: moving_sphere_material,
+    }));
+
+    objects.push(Box::new(Sphere {
+        center: point3(260.0, 150.0, 45.0),
+        radius: 50.0,
+        material: Arc::new(Box::new(Dielectric { ir: 1.5 })),
+    }));
+
+    objects.push(Box::new(Sphere {
+        center: point3(0.0, 150.0, 145.0),
+        radius: 50.0,
+        material: Arc::new(Box::new(Metal {
+            albedo: Color(vec3(0.8, 0.8, 0.9)),
+            fuzz: 1.0,
+        })),
+    }));
+
+    let boundary = Box::new(Sphere {
+        center: point3(360.0, 150.0, 145.0),
+        radius: 70.0,
+        material: Arc::new(Box::new(Dielectric { ir: 1.5 })),
+    });
+
+    objects.push(Box::new(Sphere {
+        center: point3(360.0, 150.0, 145.0),
+        radius: 70.0,
+        material: Arc::new(Box::new(Dielectric { ir: 1.5 })),
+    }));
+    objects.push(Box::new(ConstantMedium::new(
+        boundary,
+        0.2,
+        Box::new(SolidColor {
+            color_value: Color(vec3(0.2, 0.4, 0.9)),
+        }),
+    )));
+
+    let boundary = Box::new(Sphere {
+        center: point3(0.0, 0.0, 0.0),
+        radius: 5000.0,
+        material: Arc::new(Box::new(Dielectric { ir: 1.5 })),
+    });
+    objects.push(Box::new(ConstantMedium::new(
+        boundary,
+        0.0001,
+        Box::new(SolidColor {
+            color_value: Color(vec3(1.0, 1.0, 1.0)),
+        }),
+    )));
+
+    let emat: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Box::new(load_from_memory(include_bytes!("../assets/earthmap.jpg")).unwrap()),
+    }));
+
+    objects.push(Box::new(Sphere {
+        center: point3(400.0, 200.0, 400.0),
+        radius: 100.0,
+        material: emat,
+    }));
+
+    let pertext: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Box::new(NoiseTexture256::new(0.1, rng)),
+    }));
+    objects.push(Box::new(Sphere {
+        center: point3(220.0, 280.0, 300.0),
+        radius: 80.0,
+        material: pertext,
+    }));
+
+    let mut boxes2: Vec<Box<dyn Hittable>> = Vec::new();
+    let white: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Box::new(SolidColor {
+            color_value: Color(vec3(0.73, 0.73, 0.73)),
+        }),
+    }));
+
+    let ns = 1000;
+    for _ in 0..ns {
+        boxes2.push(Box::new(Sphere {
+            center: point3(
+                rng.gen_range(0.0..165.0),
+                rng.gen_range(0.0..165.0),
+                rng.gen_range(0.0..165.0),
+            ),
+            radius: 10.0,
+            material: white.clone(),
+        }))
+    }
+
+    let boxes2 = Box::new(RotateY::new(
+        Box::new(BVHNode::new(boxes2, 0.0, 1.0, rng)),
+        0.0,
+        1.0,
+        Deg(15.0),
+    ));
+    let boxes2 = Box::new(Translate {
+        hittable: boxes2,
+        offset: vec3(-100.0, 270.0, 395.0),
+    });
+
+    objects.push(boxes2);
+    BVHNode::new(objects, 0.0, 1.0, rng)
+}
+
 fn main() {
     let mut aspect_ratio: Float = 16.0 / 9.0;
     let mut image_width: usize = 400;
@@ -518,7 +684,7 @@ fn main() {
 
     let mut rng = MyRng::from_entropy();
 
-    let (world, background, look_from, look_at, vfov, aperture) = match 6 {
+    let (world, background, look_from, look_at, vfov, aperture) = match 7 {
         0 => (
             random_scene(&mut rng),
             Color(vec3(0.70, 0.80, 1.00)),
@@ -575,7 +741,7 @@ fn main() {
                 0.0,
             )
         }
-        _ => {
+        6 => {
             aspect_ratio = 1.0;
             image_width = 600;
             samples_per_pixel = 200;
@@ -583,6 +749,19 @@ fn main() {
                 cornel_smoke(&mut rng),
                 Color(vec3(0.0, 0.0, 0.0)),
                 point3(278.0, 278.0, -800.0),
+                point3(278.0, 278.0, 0.0),
+                Deg(40.0),
+                0.0,
+            )
+        }
+        _ => {
+            aspect_ratio = 1.0;
+            image_width = 800;
+            samples_per_pixel = 200;
+            (
+                final_scene(&mut rng),
+                Color(vec3(0.0, 0.0, 0.0)),
+                point3(478.0, 278.0, -600.0),
                 point3(278.0, 278.0, 0.0),
                 Deg(40.0),
                 0.0,
