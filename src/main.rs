@@ -59,7 +59,9 @@ fn main() {
         albedo: Color(vec3(0.8, 0.8, 0.0)),
     }));
 
-    let material_center: Arc<Box<dyn Material>> = Arc::new(Box::new(Dielectric { ir: 1.5 }));
+    let material_center: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Color(vec3(0.1, 0.2, 0.5)),
+    }));
 
     let material_left: Arc<Box<dyn Material>> = Arc::new(Box::new(Dielectric { ir: 1.5 }));
 
