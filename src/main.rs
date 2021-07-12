@@ -84,6 +84,11 @@ fn main() {
         Box::new(Sphere {
             center: point3(-1.0, 0.0, -1.0),
             radius: 0.5,
+            material: material_left.clone(),
+        }),
+        Box::new(Sphere {
+            center: point3(-1.0, 0.0, -1.0),
+            radius: -0.4,
             material: material_left,
         }),
         Box::new(Sphere {
