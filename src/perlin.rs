@@ -69,6 +69,20 @@ impl<const POINT_COUNT: usize> Perlin<POINT_COUNT> {
         Self::perlin_interp(c, u, v, w)
     }
 
+    pub fn turb(&self, p: Point3<Float>, depth: usize) -> Float {
+        let mut accum = 0.0;
+        let mut temp_p = p;
+        let mut weight = 1.0;
+
+        for _ in 0..depth {
+            accum += weight * self.noise(temp_p);
+            weight *= 0.5;
+            temp_p *= 2.0;
+        }
+
+        accum.abs()
+    }
+
     fn perlin_interp(c: [[[Vector3<Float>; 2]; 2]; 2], u: Float, v: Float, w: Float) -> Float {
         let uu = u * u * (3.0 - 2.0 * u);
         let vv = v * v * (3.0 - 2.0 * v);
