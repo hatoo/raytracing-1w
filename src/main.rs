@@ -165,6 +165,34 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
     BVHNode::new(world, 0.0, 1.0, rng)
 }
 
+fn two_spheres(rng: &mut impl Rng) -> BVHNode {
+    let checker_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Box::new(CheckerTexture {
+            even: Box::new(SolidColor {
+                color_value: Color(vec3(0.2, 0.3, 0.1)),
+            }),
+            odd: Box::new(SolidColor {
+                color_value: Color(vec3(0.9, 0.9, 0.9)),
+            }),
+        }),
+    }));
+
+    let world: Vec<Box<dyn Hittable>> = vec![
+        Box::new(Sphere {
+            center: point3(0.0, -10.0, 0.0),
+            radius: 10.0,
+            material: checker_material.clone(),
+        }),
+        Box::new(Sphere {
+            center: point3(0.0, 10.0, 0.0),
+            radius: 10.0,
+            material: checker_material.clone(),
+        }),
+    ];
+
+    BVHNode::new(world, 0.0, 1.0, rng)
+}
+
 fn main() {
     const ASPECT_RATIO: Float = 16.0 / 9.0;
     const IMAGE_WIDTH: usize = 400;
@@ -174,22 +202,32 @@ fn main() {
 
     let mut rng = MyRng::from_entropy();
 
-    let world = random_scene(&mut rng);
+    let (world, look_from, look_at, vfov, aperture) = match 1 {
+        0 => (
+            random_scene(&mut rng),
+            point3(13.0, 2.0, 3.0),
+            point3(0.0, 0.0, 0.0),
+            Deg(20.0),
+            0.1,
+        ),
+        _ => (
+            two_spheres(&mut rng),
+            point3(13.0, 2.0, 3.0),
+            point3(0.0, 0.0, 0.0),
+            Deg(20.0),
+            0.0,
+        ),
+    };
 
-    let look_from = point3(13.0, 2.0, 3.0);
-    let look_at = point3(0.0, 0.0, 0.0);
     let vup = vec3(0.0, 1.0, 0.0);
-    let dist_to_focus = 10.0;
-    let aperture = 0.1;
-
     let camera = Camera::new(
         look_from,
         look_at,
         vup,
-        Deg(20.0),
+        vfov,
         ASPECT_RATIO,
         aperture,
-        dist_to_focus,
+        10.0,
         0.0,
         1.0,
     );
