@@ -2,6 +2,7 @@ type Float = f64;
 type MyRng = StdRng;
 
 mod aabb;
+mod aarect;
 mod bvd;
 mod camera;
 mod color;
@@ -29,10 +30,11 @@ use ray::Ray;
 use rayon::prelude::*;
 
 use crate::{
+    aarect::XYRect,
     bvd::BVHNode,
     camera::Camera,
     color::SampledColor,
-    material::{Dielectric, Lambertian, Material, Metal},
+    material::{Dielectric, DiffuseLight, Lambertian, Material, Metal},
     moving_sphere::MovingSphere,
     sphere::Sphere,
     texture::{CheckerTexture, NoiseTexture256, SolidColor},
@@ -242,16 +244,51 @@ fn earth(rng: &mut impl Rng) -> BVHNode {
     BVHNode::new(vec![globe], 0.0, 1.0, rng)
 }
 
+fn simple_light(rng: &mut impl Rng) -> BVHNode {
+    let pertext: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Box::new(NoiseTexture256::new(4.0, rng)),
+    }));
+
+    let difflight: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
+        emit: Box::new(SolidColor {
+            color_value: Color(vec3(4.0, 4.0, 4.0)),
+        }),
+    }));
+
+    let world: Vec<Box<dyn Hittable>> = vec![
+        Box::new(Sphere {
+            center: point3(0.0, -1000.0, 0.0),
+            radius: 1000.0,
+            material: pertext.clone(),
+        }),
+        Box::new(Sphere {
+            center: point3(0.0, 2.0, 0.0),
+            radius: 2.0,
+            material: pertext.clone(),
+        }),
+        Box::new(XYRect {
+            x0: 3.0,
+            x1: 5.0,
+            y0: 1.0,
+            y1: 3.0,
+            k: -2.0,
+            material: difflight,
+        }),
+    ];
+
+    BVHNode::new(world, 0.0, 1.0, rng)
+}
+
 fn main() {
     const ASPECT_RATIO: Float = 16.0 / 9.0;
     const IMAGE_WIDTH: usize = 400;
     const IMAGE_HEIGHT: usize = (IMAGE_WIDTH as Float / ASPECT_RATIO) as usize;
-    const SAMPLES_PER_PIXEL: usize = 100;
+    let mut samples_per_pixel: usize = 100;
     const MAX_DEPTH: usize = 50;
 
     let mut rng = MyRng::from_entropy();
 
-    let (world, background, look_from, look_at, vfov, aperture) = match 3 {
+    let (world, background, look_from, look_at, vfov, aperture) = match 4 {
         0 => (
             random_scene(&mut rng),
             Color(vec3(0.70, 0.80, 1.00)),
@@ -276,7 +313,7 @@ fn main() {
             Deg(20.0),
             0.0,
         ),
-        _ => (
+        3 => (
             earth(&mut rng),
             Color(vec3(0.70, 0.80, 1.00)),
             point3(13.0, 2.0, 3.0),
@@ -284,6 +321,17 @@ fn main() {
             Deg(20.0),
             0.0,
         ),
+        _ => {
+            samples_per_pixel = 400;
+            (
+                simple_light(&mut rng),
+                Color(vec3(0.0, 0.0, 0.0)),
+                point3(26.0, 3.0, 6.0),
+                point3(0.0, 2.0, 0.0),
+                Deg(20.0),
+                0.0,
+            )
+        }
     };
 
     let vup = vec3(0.0, 1.0, 0.0);
@@ -313,7 +361,7 @@ fn main() {
                     let mut rng = MyRng::seed_from_u64((j * IMAGE_WIDTH + i) as u64);
                     let mut pixel_color = Color(vec3(0.0, 0.0, 0.0));
 
-                    for _ in 0..SAMPLES_PER_PIXEL {
+                    for _ in 0..samples_per_pixel {
                         let u = (i as Float + rng.gen::<Float>()) / (IMAGE_WIDTH - 1) as Float;
                         let v = (j as Float + rng.gen::<Float>()) / (IMAGE_HEIGHT - 1) as Float;
 
@@ -324,7 +372,7 @@ fn main() {
                         );
                     }
 
-                    pixel_color.into_sampled(SAMPLES_PER_PIXEL)
+                    pixel_color.into_sampled(samples_per_pixel)
                 })
                 .collect();
             eprint!(

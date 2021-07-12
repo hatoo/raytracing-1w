@@ -39,7 +39,7 @@ pub struct Metal {
 
 #[derive(Debug)]
 pub struct DiffuseLight {
-    emit: Box<dyn Texture>,
+    pub emit: Box<dyn Texture>,
 }
 
 impl Material for Lambertian {
