@@ -226,6 +226,7 @@ version = "0.1.0"
 dependencies = [
  "cgmath",
  "float-ord",
+ "num-traits",
  "rand",
  "rayon",
 ]

@@ -6,6 +6,7 @@ use crate::{
     aabb::AABB,
     hittable::{HitRecord, Hittable},
     material::Material,
+    math::sphere_uv,
     Float,
 };
 
@@ -37,11 +38,15 @@ impl Hittable for Sphere {
         }
 
         let position = ray.at(root);
+        let outward_normal = (position - self.center) / self.radius;
+        let (u, v) = sphere_uv(EuclideanSpace::from_vec(outward_normal));
 
         Some(HitRecord::new(
             position,
-            (position - self.center) / self.radius,
+            outward_normal,
             root,
+            u,
+            v,
             ray,
             self.material.clone(),
         ))

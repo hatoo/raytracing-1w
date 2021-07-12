@@ -11,6 +11,7 @@ mod math;
 mod moving_sphere;
 mod ray;
 mod sphere;
+mod texture;
 
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
@@ -32,6 +33,7 @@ use crate::{
     material::{Dielectric, Lambertian, Material, Metal},
     moving_sphere::MovingSphere,
     sphere::Sphere,
+    texture::{CheckerTexture, SolidColor},
 };
 
 fn ray_color<H: Hittable + ?Sized>(ray: &Ray, world: &H, depth: usize, rng: &mut MyRng) -> Color {
@@ -60,7 +62,14 @@ fn ray_color<H: Hittable + ?Sized>(ray: &Ray, world: &H, depth: usize, rng: &mut
 
 fn random_scene(rng: &mut impl Rng) -> BVHNode {
     let ground_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Color(vec3(0.5, 0.5, 0.5)),
+        albedo: Box::new(CheckerTexture {
+            even: Box::new(SolidColor {
+                color_value: Color(vec3(0.2, 0.3, 0.1)),
+            }),
+            odd: Box::new(SolidColor {
+                color_value: Color(vec3(0.9, 0.9, 0.9)),
+            }),
+        }),
     }));
 
     let mut world: Vec<Box<dyn Hittable>> = vec![Box::new(Sphere {
@@ -84,8 +93,11 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
                         let albedo =
                             Color(rng.gen::<Color>().0.mul_element_wise(rng.gen::<Color>().0));
                         let center2 = center + vec3(0.0, rng.gen_range(0.0..0.5), 0.0);
-                        let material: Arc<Box<dyn Material>> =
-                            Arc::new(Box::new(Lambertian { albedo }));
+                        let material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+                            albedo: Box::new(SolidColor {
+                                color_value: albedo,
+                            }),
+                        }));
                         Box::new(MovingSphere {
                             center0: center,
                             center1: center2,
@@ -135,7 +147,9 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
         center: point3(-4.0, 1.0, 0.0),
         radius: 1.0,
         material: Arc::new(Box::new(Lambertian {
-            albedo: Color(vec3(0.4, 0.2, 0.1)),
+            albedo: Box::new(SolidColor {
+                color_value: Color(vec3(0.4, 0.2, 0.1)),
+            }),
         })),
     }));
 

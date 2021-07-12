@@ -1,5 +1,6 @@
 use crate::Float;
-use cgmath::{dot, vec3, InnerSpace, Vector3};
+use cgmath::{dot, vec3, InnerSpace, Point3, Vector3};
+use num_traits::float::FloatConst;
 use rand::prelude::*;
 
 pub fn random_vec3_in_unit_sphere(rng: &mut impl Rng) -> Vector3<Float> {
@@ -33,6 +34,12 @@ pub fn random_vec3_in_unit_disk(rng: &mut impl Rng) -> Vector3<Float> {
             break p;
         }
     }
+}
+
+pub fn sphere_uv(point: Point3<Float>) -> (Float, Float) {
+    let theta = (-point.y).acos();
+    let phi = (-point.z).atan2(point.x) + Float::PI();
+    (phi / (2.0 * Float::PI()), theta / Float::PI())
 }
 
 pub trait IsNearZero {

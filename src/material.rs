@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::Float;
+use crate::{texture::Texture, Float};
 use cgmath::{dot, vec3, InnerSpace, Vector3};
 use rand::Rng;
 
@@ -24,7 +24,7 @@ pub trait Material: Debug + Send + Sync {
 
 #[derive(Debug)]
 pub struct Lambertian {
-    pub albedo: Color,
+    pub albedo: Box<dyn Texture>,
 }
 
 #[derive(Debug)]
@@ -51,7 +51,9 @@ impl Material for Lambertian {
         };
 
         Some(Scatter {
-            color: self.albedo,
+            color: self
+                .albedo
+                .value(hit_record.u, hit_record.v, hit_record.position),
             ray: scatterd,
         })
     }

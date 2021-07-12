@@ -10,6 +10,8 @@ pub struct HitRecord {
     pub position: Point3<Float>,
     pub normal: Vector3<Float>,
     pub t: Float,
+    pub u: Float,
+    pub v: Float,
     pub front_face: bool,
     pub material: Arc<Box<dyn Material>>,
 }
@@ -19,6 +21,8 @@ impl HitRecord {
         position: Point3<Float>,
         outward_normal: Vector3<Float>,
         t: Float,
+        u: Float,
+        v: Float,
         ray: &Ray,
         material: Arc<Box<dyn Material>>,
     ) -> Self {
@@ -33,6 +37,8 @@ impl HitRecord {
             position,
             normal,
             t,
+            u,
+            v,
             front_face,
             material,
         }

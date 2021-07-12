@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
-use cgmath::{dot, vec3, InnerSpace, Point3};
+use cgmath::{dot, vec3, EuclideanSpace, InnerSpace, Point3};
 
 use crate::{
     aabb::{surrounding_box, AABB},
     hittable::{HitRecord, Hittable},
     material::Material,
+    math::sphere_uv,
     Float,
 };
 
@@ -47,11 +48,15 @@ impl Hittable for MovingSphere {
         }
 
         let position = ray.at(root);
+        let outward_normal = (position - self.center(ray.time)) / self.radius;
+        let (u, v) = sphere_uv(EuclideanSpace::from_vec(outward_normal));
 
         Some(HitRecord::new(
             position,
-            (position - self.center(ray.time)) / self.radius,
+            outward_normal,
             root,
+            u,
+            v,
             ray,
             self.material.clone(),
         ))
