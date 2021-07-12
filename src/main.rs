@@ -4,7 +4,7 @@ type MyRng = StdRng;
 mod aabb;
 mod aabox;
 mod aarect;
-mod bvd;
+mod bvh;
 mod camera;
 mod color;
 mod constant_medium;
@@ -34,7 +34,7 @@ use rayon::prelude::*;
 use crate::{
     aabox::AABox,
     aarect::{XYRect, XZRect, YZRect},
-    bvd::BVHNode,
+    bvh::BVHNode,
     camera::Camera,
     color::SampledColor,
     constant_medium::ConstantMedium,

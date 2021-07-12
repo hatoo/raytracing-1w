@@ -6,7 +6,7 @@ use rand::Rng;
 use crate::{
     aabb::AABB,
     aarect::{XYRect, XZRect, YZRect},
-    bvd::BVHNode,
+    bvh::BVHNode,
     hittable::Hittable,
     material::Material,
     Float, MyRng,
