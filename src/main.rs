@@ -9,7 +9,10 @@ mod math;
 mod ray;
 mod sphere;
 
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
 
 use cgmath::{point3, prelude::*, vec3, Deg};
 use color::Color;
@@ -17,9 +20,11 @@ use hittable::Hittable;
 use material::Scatter;
 use rand::prelude::*;
 use ray::Ray;
+use rayon::prelude::*;
 
 use crate::{
     camera::Camera,
+    color::SampledColor,
     material::{Dielectric, Lambertian, Material, Metal},
     sphere::Sphere,
 };
@@ -166,21 +171,43 @@ fn main() {
 
     println!("P3\n{} {}\n255", IMAGE_WIDTH, IMAGE_HEIGHT);
 
-    for j in (0..IMAGE_HEIGHT).rev() {
-        eprint!("\rScanlines remaining: {} ", j);
-        for i in 0..IMAGE_WIDTH {
-            let mut pixel_color = Color(vec3(0.0, 0.0, 0.0));
+    let sacans_remaining = AtomicUsize::new(IMAGE_HEIGHT);
 
-            for _ in 0..SAMPLES_PER_PIXEL {
-                let u = (i as Float + rng.gen::<Float>()) / (IMAGE_WIDTH - 1) as Float;
-                let v = (j as Float + rng.gen::<Float>()) / (IMAGE_HEIGHT - 1) as Float;
+    let image: Vec<Vec<SampledColor>> = (0..IMAGE_HEIGHT)
+        .into_par_iter()
+        .rev()
+        .map(|j| {
+            let row = (0..IMAGE_WIDTH)
+                .into_par_iter()
+                .map(|i| {
+                    let mut rng = MyRng::seed_from_u64((j * IMAGE_WIDTH + i) as u64);
+                    let mut pixel_color = Color(vec3(0.0, 0.0, 0.0));
 
-                let ray = camera.get_ray(u, v, &mut rng);
-                pixel_color =
-                    Color(pixel_color.0 + ray_color(&ray, world.as_slice(), MAX_DEPTH, &mut rng).0);
-            }
+                    for _ in 0..SAMPLES_PER_PIXEL {
+                        let u = (i as Float + rng.gen::<Float>()) / (IMAGE_WIDTH - 1) as Float;
+                        let v = (j as Float + rng.gen::<Float>()) / (IMAGE_HEIGHT - 1) as Float;
 
-            println!("{}", pixel_color.into_sampled(SAMPLES_PER_PIXEL));
+                        let ray = camera.get_ray(u, v, &mut rng);
+                        pixel_color = Color(
+                            pixel_color.0
+                                + ray_color(&ray, world.as_slice(), MAX_DEPTH, &mut rng).0,
+                        );
+                    }
+
+                    pixel_color.into_sampled(SAMPLES_PER_PIXEL)
+                })
+                .collect();
+            eprint!(
+                "\rScanlines remaining: {} ",
+                sacans_remaining.fetch_sub(1, Ordering::Relaxed) - 1
+            );
+            row
+        })
+        .collect();
+
+    for row in image {
+        for color in row {
+            println!("{}", color);
         }
     }
 

@@ -8,3 +8,4 @@ edition = "2018"
 [dependencies]
 cgmath = "0.18.0"
 rand = "0.8.4"
+rayon = "1.5"

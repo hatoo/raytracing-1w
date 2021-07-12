@@ -18,7 +18,7 @@ pub struct Scatter {
     pub ray: Ray,
 }
 
-pub trait Material: Debug {
+pub trait Material: Debug + Send + Sync {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter>;
 }
 

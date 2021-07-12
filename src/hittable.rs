@@ -38,7 +38,7 @@ impl HitRecord {
     }
 }
 
-pub trait Hittable {
+pub trait Hittable: Send + Sync {
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord>;
 }
 
