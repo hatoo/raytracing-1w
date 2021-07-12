@@ -41,6 +41,10 @@ impl<const POINT_COUNT: usize> Perlin<POINT_COUNT> {
         let v = p.y - p.y.floor();
         let w = p.z - p.z.floor();
 
+        let u = u * u * (3.0 - 2.0 * u);
+        let v = v * v * (3.0 - 2.0 * v);
+        let w = w * w * (3.0 - 2.0 * w);
+
         let i = p.x.floor() as isize;
         let j = p.y.floor() as isize;
         let k = p.z.floor() as isize;
