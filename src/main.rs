@@ -38,28 +38,38 @@ use crate::{
     texture::{CheckerTexture, NoiseTexture256, SolidColor},
 };
 
-fn ray_color<H: Hittable + ?Sized>(ray: &Ray, world: &H, depth: usize, rng: &mut MyRng) -> Color {
+fn ray_color<H: Hittable + ?Sized>(
+    ray: &Ray,
+    background: Color,
+    world: &H,
+    depth: usize,
+    rng: &mut MyRng,
+) -> Color {
     if depth == 0 {
         return Color(vec3(0.0, 0.0, 0.0));
     }
     if let Some(hit_record) = world.hit(ray, 0.001, Float::INFINITY) {
+        let emitted = hit_record
+            .material
+            .emitted(hit_record.u, hit_record.v, hit_record.position);
+
         return if let Some(Scatter {
             color,
             ray: scatterd,
         }) = hit_record.material.scatter(ray, &hit_record, rng)
         {
             Color(
-                color
-                    .0
-                    .mul_element_wise(ray_color(&scatterd, world, depth - 1, rng).0),
+                emitted.0
+                    + color.0.mul_element_wise(
+                        ray_color(&scatterd, background, world, depth - 1, rng).0,
+                    ),
             )
         } else {
-            Color(vec3(0.0, 0.0, 0.0))
+            emitted
         };
+    } else {
+        background
     }
-    let unit_direction = InnerSpace::normalize(ray.direction);
-    let t = 0.5 * (unit_direction.y + 1.0);
-    Color(vec3(1.0, 1.0, 1.0).lerp(vec3(0.5, 0.7, 1.0), t))
 }
 
 fn random_scene(rng: &mut impl Rng) -> BVHNode {
@@ -241,9 +251,10 @@ fn main() {
 
     let mut rng = MyRng::from_entropy();
 
-    let (world, look_from, look_at, vfov, aperture) = match 3 {
+    let (world, background, look_from, look_at, vfov, aperture) = match 3 {
         0 => (
             random_scene(&mut rng),
+            Color(vec3(0.70, 0.80, 1.00)),
             point3(13.0, 2.0, 3.0),
             point3(0.0, 0.0, 0.0),
             Deg(20.0),
@@ -251,6 +262,7 @@ fn main() {
         ),
         1 => (
             two_spheres(&mut rng),
+            Color(vec3(0.70, 0.80, 1.00)),
             point3(13.0, 2.0, 3.0),
             point3(0.0, 0.0, 0.0),
             Deg(20.0),
@@ -258,6 +270,7 @@ fn main() {
         ),
         2 => (
             two_perlin_spheres(&mut rng),
+            Color(vec3(0.70, 0.80, 1.00)),
             point3(13.0, 2.0, 3.0),
             point3(0.0, 0.0, 0.0),
             Deg(20.0),
@@ -265,6 +278,7 @@ fn main() {
         ),
         _ => (
             earth(&mut rng),
+            Color(vec3(0.70, 0.80, 1.00)),
             point3(13.0, 2.0, 3.0),
             point3(0.0, 0.0, 0.0),
             Deg(20.0),
@@ -304,8 +318,10 @@ fn main() {
                         let v = (j as Float + rng.gen::<Float>()) / (IMAGE_HEIGHT - 1) as Float;
 
                         let ray = camera.get_ray(u, v, &mut rng);
-                        pixel_color =
-                            Color(pixel_color.0 + ray_color(&ray, &world, MAX_DEPTH, &mut rng).0);
+                        pixel_color = Color(
+                            pixel_color.0
+                                + ray_color(&ray, background, &world, MAX_DEPTH, &mut rng).0,
+                        );
                     }
 
                     pixel_color.into_sampled(SAMPLES_PER_PIXEL)

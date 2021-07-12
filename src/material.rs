@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use crate::{texture::Texture, Float};
-use cgmath::{dot, vec3, InnerSpace, Vector3};
+use cgmath::{dot, vec3, InnerSpace, Point3, Vector3};
 use rand::Rng;
 
 use crate::{
@@ -20,6 +20,10 @@ pub struct Scatter {
 
 pub trait Material: Debug + Send + Sync {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter>;
+
+    fn emitted(&self, _u: Float, _v: Float, _p: Point3<Float>) -> Color {
+        Color(vec3(0.0, 0.0, 0.0))
+    }
 }
 
 #[derive(Debug)]
@@ -31,6 +35,11 @@ pub struct Lambertian {
 pub struct Metal {
     pub albedo: Color,
     pub fuzz: Float,
+}
+
+#[derive(Debug)]
+pub struct DiffuseLight {
+    emit: Box<dyn Texture>,
 }
 
 impl Material for Lambertian {
@@ -128,5 +137,15 @@ impl Material for Dielectric {
                 time: ray.time,
             },
         })
+    }
+}
+
+impl Material for DiffuseLight {
+    fn scatter(&self, _ray: &Ray, _hit_record: &HitRecord, _rng: &mut MyRng) -> Option<Scatter> {
+        None
+    }
+
+    fn emitted(&self, u: Float, v: Float, p: Point3<Float>) -> Color {
+        self.emit.value(u, v, p)
     }
 }
