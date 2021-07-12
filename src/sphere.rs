@@ -7,7 +7,7 @@ use crate::{
     hittable::{HitRecord, Hittable},
     material::Material,
     math::sphere_uv,
-    Float,
+    Float, MyRng,
 };
 
 pub struct Sphere {
@@ -17,7 +17,13 @@ pub struct Sphere {
 }
 
 impl Hittable for Sphere {
-    fn hit(&self, ray: &crate::ray::Ray, t_min: Float, t_max: Float) -> Option<HitRecord> {
+    fn hit(
+        &self,
+        ray: &crate::ray::Ray,
+        t_min: Float,
+        t_max: Float,
+        _rng: &mut MyRng,
+    ) -> Option<HitRecord> {
         let oc = ray.origin - self.center;
         let a = InnerSpace::magnitude2(ray.direction);
         let half_b = dot(oc, ray.direction);

@@ -7,6 +7,7 @@ mod aarect;
 mod bvd;
 mod camera;
 mod color;
+mod constant_medium;
 mod hittable;
 mod material;
 mod math;
@@ -36,6 +37,7 @@ use crate::{
     bvd::BVHNode,
     camera::Camera,
     color::SampledColor,
+    constant_medium::ConstantMedium,
     hittable::{RotateY, Translate},
     material::{Dielectric, DiffuseLight, Lambertian, Material, Metal},
     moving_sphere::MovingSphere,
@@ -53,7 +55,7 @@ fn ray_color<H: Hittable + ?Sized>(
     if depth == 0 {
         return Color(vec3(0.0, 0.0, 0.0));
     }
-    if let Some(hit_record) = world.hit(ray, 0.001, Float::INFINITY) {
+    if let Some(hit_record) = world.hit(ray, 0.001, Float::INFINITY, rng) {
         let emitted = hit_record
             .material
             .emitted(hit_record.u, hit_record.v, hit_record.position);
@@ -387,6 +389,127 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
     BVHNode::new(world, 0.0, 1.0, rng)
 }
 
+fn cornel_smoke(rng: &mut impl Rng) -> BVHNode {
+    let red: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Box::new(SolidColor {
+            color_value: Color(vec3(0.65, 0.05, 0.05)),
+        }),
+    }));
+
+    let white: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Box::new(SolidColor {
+            color_value: Color(vec3(0.73, 0.73, 0.73)),
+        }),
+    }));
+
+    let green: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Box::new(SolidColor {
+            color_value: Color(vec3(0.12, 0.45, 0.15)),
+        }),
+    }));
+
+    let light: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
+        emit: Box::new(SolidColor {
+            color_value: Color(vec3(15.0, 15.0, 15.0)),
+        }),
+    }));
+
+    let box1 = Box::new(AABox::new(
+        point3(0.0, 0.0, 0.0),
+        point3(165.0, 330.0, 165.0),
+        white.clone(),
+        rng,
+    ));
+    let box1 = Box::new(RotateY::new(box1, 0.0, 1.0, Deg(15.0)));
+    let box1 = Box::new(Translate {
+        hittable: box1,
+        offset: vec3(265.0, 0.0, 295.0),
+    });
+
+    let box2 = Box::new(AABox::new(
+        point3(0.0, 0.0, 0.0),
+        point3(165.0, 165.0, 165.0),
+        white.clone(),
+        rng,
+    ));
+    let box2 = Box::new(RotateY::new(box2, 0.0, 1.0, Deg(-18.0)));
+    let box2 = Box::new(Translate {
+        hittable: box2,
+        offset: vec3(130.0, 0.0, 65.0),
+    });
+
+    let smoke1 = Box::new(ConstantMedium::new(
+        box1,
+        0.01,
+        Box::new(SolidColor {
+            color_value: Color(vec3(0.0, 0.0, 0.0)),
+        }),
+    ));
+
+    let smoke2 = Box::new(ConstantMedium::new(
+        box2,
+        0.01,
+        Box::new(SolidColor {
+            color_value: Color(vec3(1.0, 1.0, 1.0)),
+        }),
+    ));
+
+    let world: Vec<Box<dyn Hittable>> = vec![
+        Box::new(YZRect {
+            y0: 0.0,
+            y1: 555.0,
+            z0: 0.0,
+            z1: 555.0,
+            k: 555.0,
+            material: green,
+        }),
+        Box::new(YZRect {
+            y0: 0.0,
+            y1: 555.0,
+            z0: 0.0,
+            z1: 555.0,
+            k: 0.0,
+            material: red,
+        }),
+        Box::new(XZRect {
+            x0: 213.0,
+            x1: 343.0,
+            z0: 227.0,
+            z1: 332.0,
+            k: 554.0,
+            material: light,
+        }),
+        Box::new(XZRect {
+            x0: 0.0,
+            x1: 555.0,
+            z0: 0.0,
+            z1: 555.0,
+            k: 0.0,
+            material: white.clone(),
+        }),
+        Box::new(XZRect {
+            x0: 0.0,
+            x1: 555.0,
+            z0: 0.0,
+            z1: 555.0,
+            k: 555.0,
+            material: white.clone(),
+        }),
+        Box::new(XYRect {
+            x0: 0.0,
+            x1: 555.0,
+            y0: 0.0,
+            y1: 555.0,
+            k: 555.0,
+            material: white.clone(),
+        }),
+        smoke1,
+        smoke2,
+    ];
+
+    BVHNode::new(world, 0.0, 1.0, rng)
+}
+
 fn main() {
     let mut aspect_ratio: Float = 16.0 / 9.0;
     let mut image_width: usize = 400;
@@ -395,7 +518,7 @@ fn main() {
 
     let mut rng = MyRng::from_entropy();
 
-    let (world, background, look_from, look_at, vfov, aperture) = match 5 {
+    let (world, background, look_from, look_at, vfov, aperture) = match 6 {
         0 => (
             random_scene(&mut rng),
             Color(vec3(0.70, 0.80, 1.00)),
@@ -439,12 +562,25 @@ fn main() {
                 0.0,
             )
         }
-        _ => {
+        5 => {
             aspect_ratio = 1.0;
             image_width = 600;
             samples_per_pixel = 200;
             (
                 cornel_box(&mut rng),
+                Color(vec3(0.0, 0.0, 0.0)),
+                point3(278.0, 278.0, -800.0),
+                point3(278.0, 278.0, 0.0),
+                Deg(40.0),
+                0.0,
+            )
+        }
+        _ => {
+            aspect_ratio = 1.0;
+            image_width = 600;
+            samples_per_pixel = 200;
+            (
+                cornel_smoke(&mut rng),
                 Color(vec3(0.0, 0.0, 0.0)),
                 point3(278.0, 278.0, -800.0),
                 point3(278.0, 278.0, 0.0),

@@ -9,7 +9,7 @@ use crate::{
     bvd::BVHNode,
     hittable::Hittable,
     material::Material,
-    Float,
+    Float, MyRng,
 };
 
 pub struct AABox {
@@ -90,8 +90,9 @@ impl Hittable for AABox {
         ray: &crate::ray::Ray,
         t_min: Float,
         t_max: Float,
+        rng: &mut MyRng,
     ) -> Option<crate::hittable::HitRecord> {
-        self.sides.hit(ray, t_min, t_max)
+        self.sides.hit(ray, t_min, t_max, rng)
     }
 
     fn bounding_box(&self, _time0: Float, _time1: Float) -> Option<AABB> {

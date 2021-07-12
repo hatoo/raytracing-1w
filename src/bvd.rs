@@ -4,7 +4,7 @@ use rand::Rng;
 use crate::{
     aabb::{surrounding_box, AABB},
     hittable::Hittable,
-    Float,
+    Float, MyRng,
 };
 
 enum BVHChild {
@@ -27,22 +27,23 @@ impl Hittable for BVHNode {
         ray: &crate::ray::Ray,
         t_min: crate::Float,
         t_max: crate::Float,
+        rng: &mut MyRng,
     ) -> Option<crate::hittable::HitRecord> {
         if !self.aabb.hit(ray, t_min, t_max) {
             return None;
         }
 
         match &self.child {
-            BVHChild::One(obj) => obj.hit(ray, t_min, t_max),
+            BVHChild::One(obj) => obj.hit(ray, t_min, t_max, rng),
             BVHChild::Two(left, right) => {
-                if let Some(hit_left) = left.hit(ray, t_min, t_max) {
-                    if let Some(hit_right) = right.hit(ray, t_min, hit_left.t) {
+                if let Some(hit_left) = left.hit(ray, t_min, t_max, rng) {
+                    if let Some(hit_right) = right.hit(ray, t_min, hit_left.t, rng) {
                         Some(hit_right)
                     } else {
                         Some(hit_left)
                     }
                 } else {
-                    right.hit(ray, t_min, t_max)
+                    right.hit(ray, t_min, t_max, rng)
                 }
             }
         }

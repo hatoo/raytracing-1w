@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use crate::aabb::{surrounding_box, AABB};
-use crate::Float;
 use crate::{material::Material, ray::Ray};
+use crate::{Float, MyRng};
 use cgmath::{dot, point3, vec3, Angle, Deg, Point3, Rad, Vector3};
 
 #[derive(Clone, Debug)]
@@ -106,13 +106,13 @@ impl RotateY {
 }
 
 pub trait Hittable: Send + Sync {
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord>;
+    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord>;
     fn bounding_box(&self, time0: Float, time1: Float) -> Option<AABB>;
 }
 
 impl Hittable for Box<dyn Hittable> {
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord> {
-        self.as_ref().hit(ray, t_min, t_max)
+    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
+        self.as_ref().hit(ray, t_min, t_max, rng)
     }
 
     fn bounding_box(&self, time0: Float, time1: Float) -> Option<AABB> {
@@ -121,12 +121,12 @@ impl Hittable for Box<dyn Hittable> {
 }
 
 impl<T: Hittable> Hittable for [T] {
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord> {
+    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
         let mut hit_record = None;
         let mut closest_so_far = t_max;
 
         for hittable in self {
-            if let Some(new_hit_record) = hittable.hit(ray, t_min, closest_so_far) {
+            if let Some(new_hit_record) = hittable.hit(ray, t_min, closest_so_far, rng) {
                 closest_so_far = new_hit_record.t;
                 hit_record = Some(new_hit_record);
             }
@@ -156,24 +156,26 @@ impl<T: Hittable> Hittable for [T] {
 }
 
 impl Hittable for Translate {
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord> {
+    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
         let moved = Ray {
             origin: ray.origin - self.offset,
             direction: ray.direction,
             time: ray.time,
         };
 
-        self.hittable.hit(&moved, t_min, t_max).map(|hit_record| {
-            HitRecord::new(
-                hit_record.position + self.offset,
-                hit_record.normal,
-                hit_record.t,
-                hit_record.u,
-                hit_record.v,
-                &moved,
-                hit_record.material,
-            )
-        })
+        self.hittable
+            .hit(&moved, t_min, t_max, rng)
+            .map(|hit_record| {
+                HitRecord::new(
+                    hit_record.position + self.offset,
+                    hit_record.normal,
+                    hit_record.t,
+                    hit_record.u,
+                    hit_record.v,
+                    &moved,
+                    hit_record.material,
+                )
+            })
     }
 
     fn bounding_box(&self, time0: Float, time1: Float) -> Option<AABB> {
@@ -185,7 +187,7 @@ impl Hittable for Translate {
 }
 
 impl Hittable for RotateY {
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord> {
+    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
         let mut origin = ray.origin;
         let mut direction = ray.direction;
 
@@ -202,7 +204,7 @@ impl Hittable for RotateY {
         };
 
         self.hittable
-            .hit(&rotated_r, t_min, t_max)
+            .hit(&rotated_r, t_min, t_max, rng)
             .map(|hit_record| {
                 let mut p = hit_record.position;
                 let mut normal = hit_record.normal;
