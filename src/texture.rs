@@ -55,6 +55,6 @@ impl Texture for CheckerTexture {
 
 impl<const POINT_COUNT: usize> Texture for NoiseTexture<POINT_COUNT> {
     fn value(&self, _u: Float, _v: Float, point: Point3<Float>) -> Color {
-        Color(self.perlin.noise(self.scale * point) * vec3(1.0, 1.0, 1.0))
+        Color(vec3(1.0, 1.0, 1.0) * 0.5 * (1.0 + self.perlin.noise(self.scale * point)))
     }
 }

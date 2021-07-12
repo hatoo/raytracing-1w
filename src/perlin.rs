@@ -1,11 +1,11 @@
-use cgmath::{vec3, Point3};
+use cgmath::{dot, vec3, InnerSpace, Point3, Vector3};
 use rand::{prelude::SliceRandom, Rng};
 
 use crate::{color::Color, texture::Texture, Float};
 
 #[derive(Debug)]
 pub struct Perlin<const POINT_COUNT: usize> {
-    ranfloat: [Float; POINT_COUNT],
+    ranvec: [Vector3<Float>; POINT_COUNT],
     perm_x: [usize; POINT_COUNT],
     perm_y: [usize; POINT_COUNT],
     perm_z: [usize; POINT_COUNT],
@@ -23,11 +23,18 @@ impl<const POINT_COUNT: usize> Perlin<POINT_COUNT> {
     }
 
     pub fn new(rng: &mut impl Rng) -> Self {
-        let mut ranfloat = [0.0; POINT_COUNT];
-        rng.fill(&mut ranfloat[..]);
+        let mut ranvec = [vec3(0.0, 0.0, 0.0); POINT_COUNT];
+
+        for v in ranvec.iter_mut() {
+            *v = InnerSpace::normalize(vec3(
+                rng.gen_range(-1.0..1.0),
+                rng.gen_range(-1.0..1.0),
+                rng.gen_range(-1.0..1.0),
+            ));
+        }
 
         Self {
-            ranfloat,
+            ranvec,
             perm_x: Self::generate_perm(rng),
             perm_y: Self::generate_perm(rng),
             perm_z: Self::generate_perm(rng),
@@ -39,15 +46,11 @@ impl<const POINT_COUNT: usize> Perlin<POINT_COUNT> {
         let v = p.y - p.y.floor();
         let w = p.z - p.z.floor();
 
-        let u = u * u * (3.0 - 2.0 * u);
-        let v = v * v * (3.0 - 2.0 * v);
-        let w = w * w * (3.0 - 2.0 * w);
-
         let i = p.x.floor() as isize;
         let j = p.y.floor() as isize;
         let k = p.z.floor() as isize;
 
-        let mut c = [[[0.0; 2]; 2]; 2];
+        let mut c = [[[vec3(0.0, 0.0, 0.0); 2]; 2]; 2];
 
         for di in 0..2 {
             for dj in 0..2 {
@@ -56,26 +59,30 @@ impl<const POINT_COUNT: usize> Perlin<POINT_COUNT> {
                     let j = (j + dj) & (POINT_COUNT as isize - 1);
                     let k = (k + dk) & (POINT_COUNT as isize - 1);
 
-                    c[di as usize][dj as usize][dk as usize] = self.ranfloat[self.perm_x
-                        [i as usize]
+                    c[di as usize][dj as usize][dk as usize] = self.ranvec[self.perm_x[i as usize]
                         ^ self.perm_y[j as usize]
                         ^ self.perm_z[k as usize]];
                 }
             }
         }
 
-        Self::trilinear_interp(c, u, v, w)
+        Self::perlin_interp(c, u, v, w)
     }
 
-    fn trilinear_interp(c: [[[Float; 2]; 2]; 2], u: Float, v: Float, w: Float) -> Float {
+    fn perlin_interp(c: [[[Vector3<Float>; 2]; 2]; 2], u: Float, v: Float, w: Float) -> Float {
+        let uu = u * u * (3.0 - 2.0 * u);
+        let vv = v * v * (3.0 - 2.0 * v);
+        let ww = w * w * (3.0 - 2.0 * w);
+
         let mut accum = 0.0;
         for i in 0..2 {
             for j in 0..2 {
                 for k in 0..2 {
-                    accum += (i as Float * u + (1 - i) as Float * (1.0 - u))
-                        * (j as Float * v + (1 - j) as Float * (1.0 - v))
-                        * (k as Float * w + (1 - k) as Float * (1.0 - w))
-                        * c[i][j][k];
+                    let weight_v = vec3(u - i as Float, v - j as Float, w - k as Float);
+                    accum += (i as Float * uu + (1 - i) as Float * (1.0 - uu))
+                        * (j as Float * vv + (1 - j) as Float * (1.0 - vv))
+                        * (k as Float * ww + (1 - k) as Float * (1.0 - ww))
+                        * dot(c[i][j][k], weight_v);
                 }
             }
         }
