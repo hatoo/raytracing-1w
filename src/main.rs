@@ -48,61 +48,111 @@ fn ray_color<H: Hittable + ?Sized>(ray: &Ray, world: &H, depth: usize, rng: &mut
     Color(vec3(1.0, 1.0, 1.0).lerp(vec3(0.5, 0.7, 1.0), t))
 }
 
+fn random_scene(rng: &mut impl Rng) -> Vec<Box<dyn Hittable>> {
+    let ground_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Color(vec3(0.5, 0.5, 0.5)),
+    }));
+
+    let mut world: Vec<Box<dyn Hittable>> = vec![Box::new(Sphere {
+        center: point3(0.0, -1000.0, 0.0),
+        radius: 1000.0,
+        material: ground_material,
+    })];
+
+    for a in -11..11 {
+        for b in -11..11 {
+            let choose_mat: Float = rng.gen();
+            let center = point3(
+                a as Float + 0.9 * rng.gen::<Float>(),
+                0.2,
+                b as Float + 0.9 * rng.gen::<Float>(),
+            );
+
+            if InnerSpace::magnitude(center - point3(4.0, 0.2, 0.0)) > 0.9 {
+                let hittable = match choose_mat {
+                    x if x < 0.8 => {
+                        let albedo =
+                            Color(rng.gen::<Color>().0.mul_element_wise(rng.gen::<Color>().0));
+                        let material: Arc<Box<dyn Material>> =
+                            Arc::new(Box::new(Lambertian { albedo }));
+                        Box::new(Sphere {
+                            center,
+                            radius: 0.3,
+                            material,
+                        })
+                    }
+                    x if x < 0.95 => {
+                        let albedo = Color(vec3(
+                            rng.gen_range(0.5..1.0),
+                            rng.gen_range(0.5..1.0),
+                            rng.gen_range(0.5..1.0),
+                        ));
+                        let fuzz = rng.gen_range(0.5..1.0);
+                        let material: Arc<Box<dyn Material>> =
+                            Arc::new(Box::new(Metal { albedo, fuzz }));
+                        Box::new(Sphere {
+                            center,
+                            radius: 0.2,
+                            material,
+                        })
+                    }
+                    _ => {
+                        let material: Arc<Box<dyn Material>> =
+                            Arc::new(Box::new(Dielectric { ir: 1.5 }));
+                        Box::new(Sphere {
+                            center,
+                            radius: 0.2,
+                            material,
+                        })
+                    }
+                };
+                world.push(hittable);
+            }
+        }
+    }
+
+    world.push(Box::new(Sphere {
+        center: point3(0.0, 1.0, 0.0),
+        radius: 1.0,
+        material: Arc::new(Box::new(Dielectric { ir: 1.5 })),
+    }));
+
+    world.push(Box::new(Sphere {
+        center: point3(-4.0, 1.0, 0.0),
+        radius: 1.0,
+        material: Arc::new(Box::new(Lambertian {
+            albedo: Color(vec3(0.4, 0.2, 0.1)),
+        })),
+    }));
+
+    world.push(Box::new(Sphere {
+        center: point3(4.0, 1.0, 0.0),
+        radius: 1.0,
+        material: Arc::new(Box::new(Metal {
+            albedo: Color(vec3(0.7, 0.6, 0.5)),
+            fuzz: 0.0,
+        })),
+    }));
+
+    world
+}
+
 fn main() {
-    const ASPECT_RATIO: Float = 16.0 / 9.0;
-    const IMAGE_WIDTH: usize = 400;
+    const ASPECT_RATIO: Float = 3.0 / 2.0;
+    const IMAGE_WIDTH: usize = 1200;
     const IMAGE_HEIGHT: usize = (IMAGE_WIDTH as Float / ASPECT_RATIO) as usize;
-    const SAMPLES_PER_PIXEL: usize = 100;
+    const SAMPLES_PER_PIXEL: usize = 500;
     const MAX_DEPTH: usize = 50;
 
-    let material_ground: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Color(vec3(0.8, 0.8, 0.0)),
-    }));
+    let mut rng = MyRng::from_entropy();
 
-    let material_center: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Color(vec3(0.1, 0.2, 0.5)),
-    }));
+    let world = random_scene(&mut rng);
 
-    let material_left: Arc<Box<dyn Material>> = Arc::new(Box::new(Dielectric { ir: 1.5 }));
-
-    let material_right: Arc<Box<dyn Material>> = Arc::new(Box::new(Metal {
-        albedo: Color(vec3(0.8, 0.6, 0.2)),
-        fuzz: 0.0,
-    }));
-
-    let world: Vec<Box<dyn Hittable>> = vec![
-        Box::new(Sphere {
-            center: point3(0.0, -100.5, -1.0),
-            radius: 100.0,
-            material: material_ground,
-        }),
-        Box::new(Sphere {
-            center: point3(0.0, 0.0, -1.0),
-            radius: 0.5,
-            material: material_center,
-        }),
-        Box::new(Sphere {
-            center: point3(-1.0, 0.0, -1.0),
-            radius: 0.5,
-            material: material_left.clone(),
-        }),
-        Box::new(Sphere {
-            center: point3(-1.0, 0.0, -1.0),
-            radius: -0.45,
-            material: material_left,
-        }),
-        Box::new(Sphere {
-            center: point3(1.0, 0.0, -1.0),
-            radius: 0.5,
-            material: material_right,
-        }),
-    ];
-
-    let look_from = point3(3.0, 3.0, 2.0);
-    let look_at = point3(0.0, 0.0, -1.0);
+    let look_from = point3(13.0, 2.0, 3.0);
+    let look_at = point3(0.0, 0.0, 0.0);
     let vup = vec3(0.0, 1.0, 0.0);
-    let dist_to_focus = InnerSpace::magnitude(look_from - look_at);
-    let aperture = 2.0;
+    let dist_to_focus = 10.0;
+    let aperture = 0.1;
 
     let camera = Camera::new(
         look_from,
@@ -115,8 +165,6 @@ fn main() {
     );
 
     println!("P3\n{} {}\n255", IMAGE_WIDTH, IMAGE_HEIGHT);
-
-    let mut rng = MyRng::from_entropy();
 
     for j in (0..IMAGE_HEIGHT).rev() {
         eprint!("\rScanlines remaining: {} ", j);

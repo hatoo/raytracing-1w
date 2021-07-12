@@ -1,7 +1,8 @@
 use std::{fmt::Display, ops::Deref};
 
 use crate::Float;
-use cgmath::Vector3;
+use cgmath::{vec3, Vector3};
+use rand::{distributions::Standard, prelude::Distribution};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Color(pub Vector3<Float>);
@@ -20,6 +21,12 @@ impl Deref for Color {
     type Target = Vector3<Float>;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl Distribution<Color> for Standard {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Color {
+        Color(vec3(rng.gen(), rng.gen(), rng.gen()))
     }
 }
 
