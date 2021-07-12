@@ -26,6 +26,15 @@ pub fn random_vec3_in_hemisphere(normal: Vector3<Float>, rng: &mut impl Rng) -> 
     }
 }
 
+pub fn random_vec3_in_unit_disk(rng: &mut impl Rng) -> Vector3<Float> {
+    loop {
+        let p = vec3(rng.gen_range(-1.0..1.0), rng.gen_range(-1.0..1.0), 0.0);
+        if InnerSpace::magnitude2(p) < 1.0 {
+            break p;
+        }
+    }
+}
+
 pub trait IsNearZero {
     fn is_near_zero(&self) -> bool;
 }

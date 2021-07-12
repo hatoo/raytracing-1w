@@ -98,12 +98,20 @@ fn main() {
         }),
     ];
 
+    let look_from = point3(3.0, 3.0, 2.0);
+    let look_at = point3(0.0, 0.0, -1.0);
+    let vup = vec3(0.0, 1.0, 0.0);
+    let dist_to_focus = InnerSpace::magnitude(look_from - look_at);
+    let aperture = 2.0;
+
     let camera = Camera::new(
-        point3(-2.0, 2.0, 1.0),
-        point3(0.0, 0.0, -1.0),
-        vec3(0.0, 1.0, 0.0),
+        look_from,
+        look_at,
+        vup,
         Deg(20.0),
         ASPECT_RATIO,
+        aperture,
+        dist_to_focus,
     );
 
     println!("P3\n{} {}\n255", IMAGE_WIDTH, IMAGE_HEIGHT);
@@ -119,7 +127,7 @@ fn main() {
                 let u = (i as Float + rng.gen::<Float>()) / (IMAGE_WIDTH - 1) as Float;
                 let v = (j as Float + rng.gen::<Float>()) / (IMAGE_HEIGHT - 1) as Float;
 
-                let ray = camera.get_ray(u, v);
+                let ray = camera.get_ray(u, v, &mut rng);
                 pixel_color =
                     Color(pixel_color.0 + ray_color(&ray, world.as_slice(), MAX_DEPTH, &mut rng).0);
             }
