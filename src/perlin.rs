@@ -37,11 +37,47 @@ impl<const POINT_COUNT: usize> Perlin<POINT_COUNT> {
     }
 
     pub fn noise(&self, p: Point3<Float>) -> Float {
-        let i = (4.0 * p.x) as isize & (POINT_COUNT as isize - 1);
-        let j = (4.0 * p.y) as isize & (POINT_COUNT as isize - 1);
-        let k = (4.0 * p.z) as isize & (POINT_COUNT as isize - 1);
+        let u = p.x - p.x.floor();
+        let v = p.y - p.y.floor();
+        let w = p.z - p.z.floor();
 
-        self.ranfloat[self.perm_x[i as usize] ^ self.perm_y[j as usize] ^ self.perm_z[k as usize]]
+        let i = p.x.floor() as isize;
+        let j = p.y.floor() as isize;
+        let k = p.z.floor() as isize;
+
+        let mut c = [[[0.0; 2]; 2]; 2];
+
+        for di in 0..2 {
+            for dj in 0..2 {
+                for dk in 0..2 {
+                    let i = (i + di) & (POINT_COUNT as isize - 1);
+                    let j = (j + dj) & (POINT_COUNT as isize - 1);
+                    let k = (k + dk) & (POINT_COUNT as isize - 1);
+
+                    c[di as usize][dj as usize][dk as usize] = self.ranfloat[self.perm_x
+                        [i as usize]
+                        ^ self.perm_y[j as usize]
+                        ^ self.perm_z[k as usize]];
+                }
+            }
+        }
+
+        Self::trilinear_interp(c, u, v, w)
+    }
+
+    fn trilinear_interp(c: [[[Float; 2]; 2]; 2], u: Float, v: Float, w: Float) -> Float {
+        let mut accum = 0.0;
+        for i in 0..2 {
+            for j in 0..2 {
+                for k in 0..2 {
+                    accum += (i as Float * u + (1 - i) as Float * (1.0 - u))
+                        * (j as Float * v + (1 - j) as Float * (1.0 - v))
+                        * (k as Float * w + (1 - k) as Float * (1.0 - w))
+                        * c[i][j][k];
+                }
+            }
+        }
+        accum
     }
 }
 
