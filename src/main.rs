@@ -22,6 +22,7 @@ use std::sync::{
 use cgmath::{point3, prelude::*, vec3, Deg};
 use color::Color;
 use hittable::Hittable;
+use image::load_from_memory;
 use material::Scatter;
 use rand::prelude::*;
 use ray::Ray;
@@ -215,6 +216,22 @@ fn two_perlin_spheres(rng: &mut impl Rng) -> BVHNode {
     BVHNode::new(world, 0.0, 1.0, rng)
 }
 
+fn earth(rng: &mut impl Rng) -> BVHNode {
+    const EARTH_JPG: &[u8] = include_bytes!("../assets/earthmap.jpg");
+    let image = load_from_memory(EARTH_JPG).unwrap();
+    let earth_surface: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Box::new(image),
+    }));
+
+    let globe = Box::new(Sphere {
+        center: point3(0.0, 0.0, 0.0),
+        radius: 2.0,
+        material: earth_surface,
+    });
+
+    BVHNode::new(vec![globe], 0.0, 1.0, rng)
+}
+
 fn main() {
     const ASPECT_RATIO: Float = 16.0 / 9.0;
     const IMAGE_WIDTH: usize = 400;
@@ -224,7 +241,7 @@ fn main() {
 
     let mut rng = MyRng::from_entropy();
 
-    let (world, look_from, look_at, vfov, aperture) = match 2 {
+    let (world, look_from, look_at, vfov, aperture) = match 3 {
         0 => (
             random_scene(&mut rng),
             point3(13.0, 2.0, 3.0),
@@ -239,8 +256,15 @@ fn main() {
             Deg(20.0),
             0.0,
         ),
-        _ => (
+        2 => (
             two_perlin_spheres(&mut rng),
+            point3(13.0, 2.0, 3.0),
+            point3(0.0, 0.0, 0.0),
+            Deg(20.0),
+            0.0,
+        ),
+        _ => (
+            earth(&mut rng),
             point3(13.0, 2.0, 3.0),
             point3(0.0, 0.0, 0.0),
             Deg(20.0),

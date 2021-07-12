@@ -1,4 +1,5 @@
 use cgmath::{vec3, Point3};
+use image::{DynamicImage, GenericImageView};
 use rand::Rng;
 use std::fmt::Debug;
 
@@ -60,5 +61,29 @@ impl<const POINT_COUNT: usize> Texture for NoiseTexture<POINT_COUNT> {
                 * 0.5
                 * (1.0 + (self.scale * point.z + 10.0 * self.perlin.turb(point, 7)).sin()),
         )
+    }
+}
+
+impl Texture for DynamicImage {
+    fn value(&self, u: Float, v: Float, _point: Point3<Float>) -> Color {
+        let u = u.clamp(0.0, 1.0);
+        let v = 1.0 - v.clamp(0.0, 1.0);
+
+        let (width, height) = self.dimensions();
+        let i = (u * width as Float) as u32;
+        let j = (v * height as Float) as u32;
+
+        let i = i.min(width - 1);
+        let j = j.min(height - 1);
+
+        let pixel = self.get_pixel(i, j);
+
+        const COLOR_SCALE: Float = 1.0 / 255.0;
+
+        Color(vec3(
+            pixel.0[0] as Float * COLOR_SCALE,
+            pixel.0[1] as Float * COLOR_SCALE,
+            pixel.0[2] as Float * COLOR_SCALE,
+        ))
     }
 }
