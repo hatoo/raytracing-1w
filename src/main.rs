@@ -36,6 +36,7 @@ use crate::{
     bvd::BVHNode,
     camera::Camera,
     color::SampledColor,
+    hittable::{RotateY, Translate},
     material::{Dielectric, DiffuseLight, Lambertian, Material, Metal},
     moving_sphere::MovingSphere,
     sphere::Sphere,
@@ -306,6 +307,30 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
         }),
     }));
 
+    let box1 = Box::new(AABox::new(
+        point3(0.0, 0.0, 0.0),
+        point3(165.0, 330.0, 165.0),
+        white.clone(),
+        rng,
+    ));
+    let box1 = Box::new(RotateY::new(box1, 0.0, 1.0, Deg(15.0)));
+    let box1 = Box::new(Translate {
+        hittable: box1,
+        offset: vec3(265.0, 0.0, 295.0),
+    });
+
+    let box2 = Box::new(AABox::new(
+        point3(0.0, 0.0, 0.0),
+        point3(165.0, 165.0, 165.0),
+        white.clone(),
+        rng,
+    ));
+    let box2 = Box::new(RotateY::new(box2, 0.0, 1.0, Deg(-18.0)));
+    let box2 = Box::new(Translate {
+        hittable: box2,
+        offset: vec3(130.0, 0.0, 65.0),
+    });
+
     let world: Vec<Box<dyn Hittable>> = vec![
         Box::new(YZRect {
             y0: 0.0,
@@ -355,18 +380,8 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
             k: 555.0,
             material: white.clone(),
         }),
-        Box::new(AABox::new(
-            point3(130.0, 0.0, 65.0),
-            point3(295.0, 165.0, 230.0),
-            white.clone(),
-            rng,
-        )),
-        Box::new(AABox::new(
-            point3(265.0, 0.0, 295.0),
-            point3(430.0, 330.0, 460.0),
-            white.clone(),
-            rng,
-        )),
+        box1,
+        box2,
     ];
 
     BVHNode::new(world, 0.0, 1.0, rng)
