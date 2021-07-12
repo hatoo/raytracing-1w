@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use crate::Float;
-use cgmath::{dot, InnerSpace, Vector3};
+use cgmath::{dot, vec3, InnerSpace, Vector3};
 
 use crate::{
     color::Color,
@@ -74,5 +74,38 @@ impl Material for Metal {
         } else {
             None
         }
+    }
+}
+
+fn refract(uv: Vector3<Float>, n: Vector3<Float>, etai_over_etat: Float) -> Vector3<Float> {
+    let cos_theta = dot(-uv, n).min(1.0);
+    let r_out_perp = etai_over_etat * (uv + cos_theta * n);
+    let r_out_parallel = -(1.0 - InnerSpace::magnitude2(r_out_perp)).abs().sqrt() * n;
+    r_out_perp + r_out_parallel
+}
+
+#[derive(Debug)]
+pub struct Dielectric {
+    pub ir: Float,
+}
+
+impl Material for Dielectric {
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, _rng: &mut MyRng) -> Option<Scatter> {
+        let refraction_ratio = if hit_record.front_face {
+            1.0 / self.ir
+        } else {
+            self.ir
+        };
+
+        let unit_direction = InnerSpace::normalize(ray.direction);
+        let refracted = refract(unit_direction, hit_record.normal, refraction_ratio);
+
+        Some(Scatter {
+            color: Color(vec3(1.0, 1.0, 1.0)),
+            ray: Ray {
+                origin: hit_record.position,
+                direction: refracted,
+            },
+        })
     }
 }

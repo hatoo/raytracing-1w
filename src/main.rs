@@ -20,7 +20,7 @@ use ray::Ray;
 
 use crate::{
     camera::Camera,
-    material::{Lambertian, Material, Metal},
+    material::{Dielectric, Lambertian, Material, Metal},
     sphere::Sphere,
 };
 
@@ -59,14 +59,9 @@ fn main() {
         albedo: Color(vec3(0.8, 0.8, 0.0)),
     }));
 
-    let material_center: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Color(vec3(0.7, 0.3, 0.3)),
-    }));
+    let material_center: Arc<Box<dyn Material>> = Arc::new(Box::new(Dielectric { ir: 1.5 }));
 
-    let material_left: Arc<Box<dyn Material>> = Arc::new(Box::new(Metal {
-        albedo: Color(vec3(0.8, 0.8, 0.8)),
-        fuzz: 0.3,
-    }));
+    let material_left: Arc<Box<dyn Material>> = Arc::new(Box::new(Dielectric { ir: 1.5 }));
 
     let material_right: Arc<Box<dyn Material>> = Arc::new(Box::new(Metal {
         albedo: Color(vec3(0.8, 0.6, 0.2)),
