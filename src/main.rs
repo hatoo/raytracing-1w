@@ -11,7 +11,7 @@ mod sphere;
 
 use std::sync::Arc;
 
-use cgmath::{point3, prelude::*, vec3};
+use cgmath::{point3, prelude::*, vec3, Deg, Rad};
 use color::Color;
 use hittable::Hittable;
 use material::Scatter;
@@ -20,7 +20,7 @@ use ray::Ray;
 
 use crate::{
     camera::Camera,
-    material::{Dielectric, Lambertian, Material, Metal},
+    material::{Lambertian, Material},
     sphere::Sphere,
 };
 
@@ -55,50 +55,30 @@ fn main() {
     const SAMPLES_PER_PIXEL: usize = 100;
     const MAX_DEPTH: usize = 50;
 
-    let material_ground: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Color(vec3(0.8, 0.8, 0.0)),
+    let r: Float = Into::<Rad<Float>>::into(Deg(180.0 / 4.0)).0.cos();
+
+    let material_left: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Color(vec3(0.0, 0.0, 1.0)),
     }));
 
-    let material_center: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Color(vec3(0.1, 0.2, 0.5)),
-    }));
-
-    let material_left: Arc<Box<dyn Material>> = Arc::new(Box::new(Dielectric { ir: 1.5 }));
-
-    let material_right: Arc<Box<dyn Material>> = Arc::new(Box::new(Metal {
-        albedo: Color(vec3(0.8, 0.6, 0.2)),
-        fuzz: 1.0,
+    let material_right: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Color(vec3(1.0, 0.0, 0.0)),
     }));
 
     let world: Vec<Box<dyn Hittable>> = vec![
         Box::new(Sphere {
-            center: point3(0.0, -100.5, -1.0),
-            radius: 100.0,
-            material: material_ground,
-        }),
-        Box::new(Sphere {
-            center: point3(0.0, 0.0, -1.0),
-            radius: 0.5,
-            material: material_center,
-        }),
-        Box::new(Sphere {
-            center: point3(-1.0, 0.0, -1.0),
-            radius: 0.5,
-            material: material_left.clone(),
-        }),
-        Box::new(Sphere {
-            center: point3(-1.0, 0.0, -1.0),
-            radius: -0.4,
+            center: point3(-r, 0.0, -1.0),
+            radius: r,
             material: material_left,
         }),
         Box::new(Sphere {
-            center: point3(1.0, 0.0, -1.0),
-            radius: 0.5,
+            center: point3(r, 0.0, -1.0),
+            radius: r,
             material: material_right,
         }),
     ];
 
-    let camera = Camera::default();
+    let camera = Camera::new(Deg(90.0), ASPECT_RATIO);
 
     println!("P3\n{} {}\n255", IMAGE_WIDTH, IMAGE_HEIGHT);
 
