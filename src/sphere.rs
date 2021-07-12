@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
-use cgmath::{dot, prelude::*, Point3};
+use cgmath::{dot, prelude::*, vec3, Point3};
 
 use crate::{
+    aabb::AABB,
     hittable::{HitRecord, Hittable},
     material::Material,
     Float,
@@ -44,5 +45,12 @@ impl Hittable for Sphere {
             ray,
             self.material.clone(),
         ))
+    }
+
+    fn bounding_box(&self, _time0: Float, _time1: Float) -> Option<AABB> {
+        Some(AABB {
+            minimum: self.center - vec3(self.radius, self.radius, self.radius),
+            maximum: self.center + vec3(self.radius, self.radius, self.radius),
+        })
     }
 }

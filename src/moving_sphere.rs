@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
-use cgmath::{dot, InnerSpace, Point3};
+use cgmath::{dot, vec3, InnerSpace, Point3};
 
 use crate::{
+    aabb::{surrounding_box, AABB},
     hittable::{HitRecord, Hittable},
     material::Material,
     Float,
@@ -54,5 +55,19 @@ impl Hittable for MovingSphere {
             ray,
             self.material.clone(),
         ))
+    }
+
+    fn bounding_box(&self, time0: Float, time1: Float) -> Option<AABB> {
+        let box0 = AABB {
+            minimum: self.center(time0) - vec3(self.radius, self.radius, self.radius),
+            maximum: self.center(time0) + vec3(self.radius, self.radius, self.radius),
+        };
+
+        let box1 = AABB {
+            minimum: self.center(time1) - vec3(self.radius, self.radius, self.radius),
+            maximum: self.center(time1) + vec3(self.radius, self.radius, self.radius),
+        };
+
+        Some(surrounding_box(box0, box1))
     }
 }

@@ -1,6 +1,7 @@
 type Float = f64;
 type MyRng = StdRng;
 
+mod aabb;
 mod camera;
 mod color;
 mod hittable;

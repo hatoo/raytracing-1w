@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::aabb::{surrounding_box, AABB};
 use crate::Float;
 use crate::{material::Material, ray::Ray};
 use cgmath::{dot, Point3, Vector3};
@@ -40,11 +41,16 @@ impl HitRecord {
 
 pub trait Hittable: Send + Sync {
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord>;
+    fn bounding_box(&self, time0: Float, time1: Float) -> Option<AABB>;
 }
 
 impl Hittable for Box<dyn Hittable> {
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord> {
         self.as_ref().hit(ray, t_min, t_max)
+    }
+
+    fn bounding_box(&self, time0: Float, time1: Float) -> Option<AABB> {
+        self.as_ref().bounding_box(time0, time1)
     }
 }
 
@@ -61,5 +67,24 @@ impl<T: Hittable> Hittable for [T] {
         }
 
         hit_record
+    }
+
+    fn bounding_box(&self, time0: Float, time1: Float) -> Option<AABB> {
+        let mut b = None;
+
+        for hittable in self {
+            if let Some(b0) = hittable.bounding_box(time0, time1) {
+                b = Some(if let Some(b) = b {
+                    surrounding_box(b, b0)
+                } else {
+                    b0
+                });
+            } else {
+                {
+                    return None;
+                }
+            }
+        }
+        b
     }
 }
