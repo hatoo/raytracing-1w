@@ -30,7 +30,7 @@ use ray::Ray;
 use rayon::prelude::*;
 
 use crate::{
-    aarect::XYRect,
+    aarect::{XYRect, XZRect, YZRect},
     bvd::BVHNode,
     camera::Camera,
     color::SampledColor,
@@ -279,16 +279,94 @@ fn simple_light(rng: &mut impl Rng) -> BVHNode {
     BVHNode::new(world, 0.0, 1.0, rng)
 }
 
+fn cornel_box(rng: &mut impl Rng) -> BVHNode {
+    let red: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Box::new(SolidColor {
+            color_value: Color(vec3(0.65, 0.05, 0.05)),
+        }),
+    }));
+
+    let white: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Box::new(SolidColor {
+            color_value: Color(vec3(0.73, 0.73, 0.73)),
+        }),
+    }));
+
+    let green: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+        albedo: Box::new(SolidColor {
+            color_value: Color(vec3(0.12, 0.45, 0.15)),
+        }),
+    }));
+
+    let light: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
+        emit: Box::new(SolidColor {
+            color_value: Color(vec3(15.0, 15.0, 15.0)),
+        }),
+    }));
+
+    let world: Vec<Box<dyn Hittable>> = vec![
+        Box::new(YZRect {
+            y0: 0.0,
+            y1: 555.0,
+            z0: 0.0,
+            z1: 555.0,
+            k: 555.0,
+            material: green,
+        }),
+        Box::new(YZRect {
+            y0: 0.0,
+            y1: 555.0,
+            z0: 0.0,
+            z1: 555.0,
+            k: 0.0,
+            material: red,
+        }),
+        Box::new(XZRect {
+            x0: 213.0,
+            x1: 343.0,
+            z0: 227.0,
+            z1: 332.0,
+            k: 554.0,
+            material: light,
+        }),
+        Box::new(XZRect {
+            x0: 0.0,
+            x1: 555.0,
+            z0: 0.0,
+            z1: 555.0,
+            k: 0.0,
+            material: white.clone(),
+        }),
+        Box::new(XZRect {
+            x0: 0.0,
+            x1: 555.0,
+            z0: 0.0,
+            z1: 555.0,
+            k: 555.0,
+            material: white.clone(),
+        }),
+        Box::new(XYRect {
+            x0: 0.0,
+            x1: 555.0,
+            y0: 0.0,
+            y1: 555.0,
+            k: 555.0,
+            material: white,
+        }),
+    ];
+
+    BVHNode::new(world, 0.0, 1.0, rng)
+}
+
 fn main() {
-    const ASPECT_RATIO: Float = 16.0 / 9.0;
-    const IMAGE_WIDTH: usize = 400;
-    const IMAGE_HEIGHT: usize = (IMAGE_WIDTH as Float / ASPECT_RATIO) as usize;
+    let mut aspect_ratio: Float = 16.0 / 9.0;
+    let mut image_width: usize = 400;
     let mut samples_per_pixel: usize = 100;
     const MAX_DEPTH: usize = 50;
 
     let mut rng = MyRng::from_entropy();
 
-    let (world, background, look_from, look_at, vfov, aperture) = match 4 {
+    let (world, background, look_from, look_at, vfov, aperture) = match 5 {
         0 => (
             random_scene(&mut rng),
             Color(vec3(0.70, 0.80, 1.00)),
@@ -321,7 +399,7 @@ fn main() {
             Deg(20.0),
             0.0,
         ),
-        _ => {
+        4 => {
             samples_per_pixel = 400;
             (
                 simple_light(&mut rng),
@@ -332,38 +410,52 @@ fn main() {
                 0.0,
             )
         }
+        _ => {
+            aspect_ratio = 1.0;
+            image_width = 600;
+            samples_per_pixel = 200;
+            (
+                cornel_box(&mut rng),
+                Color(vec3(0.0, 0.0, 0.0)),
+                point3(278.0, 278.0, -800.0),
+                point3(278.0, 278.0, 0.0),
+                Deg(40.0),
+                0.0,
+            )
+        }
     };
 
+    let image_height: usize = (image_width as Float / aspect_ratio) as usize;
     let vup = vec3(0.0, 1.0, 0.0);
     let camera = Camera::new(
         look_from,
         look_at,
         vup,
         vfov,
-        ASPECT_RATIO,
+        aspect_ratio,
         aperture,
         10.0,
         0.0,
         1.0,
     );
 
-    println!("P3\n{} {}\n255", IMAGE_WIDTH, IMAGE_HEIGHT);
+    println!("P3\n{} {}\n255", image_width, image_height);
 
-    let sacans_remaining = AtomicUsize::new(IMAGE_HEIGHT);
+    let sacans_remaining = AtomicUsize::new(image_height);
 
-    let image: Vec<Vec<SampledColor>> = (0..IMAGE_HEIGHT)
+    let image: Vec<Vec<SampledColor>> = (0..image_height)
         .into_par_iter()
         .rev()
         .map(|j| {
-            let row = (0..IMAGE_WIDTH)
+            let row = (0..image_width)
                 .into_par_iter()
                 .map(|i| {
-                    let mut rng = MyRng::seed_from_u64((j * IMAGE_WIDTH + i) as u64);
+                    let mut rng = MyRng::seed_from_u64((j * image_width + i) as u64);
                     let mut pixel_color = Color(vec3(0.0, 0.0, 0.0));
 
                     for _ in 0..samples_per_pixel {
-                        let u = (i as Float + rng.gen::<Float>()) / (IMAGE_WIDTH - 1) as Float;
-                        let v = (j as Float + rng.gen::<Float>()) / (IMAGE_HEIGHT - 1) as Float;
+                        let u = (i as Float + rng.gen::<Float>()) / (image_width - 1) as Float;
+                        let v = (j as Float + rng.gen::<Float>()) / (image_height - 1) as Float;
 
                         let ray = camera.get_ray(u, v, &mut rng);
                         pixel_color = Color(

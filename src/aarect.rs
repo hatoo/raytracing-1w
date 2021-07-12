@@ -109,7 +109,7 @@ impl Hittable for XZRect {
     fn bounding_box(&self, _time0: Float, _time1: Float) -> Option<AABB> {
         Some(AABB {
             minimum: point3(self.x0, self.k - 0.0001, self.z0),
-            maximum: point3(self.x1, self.k + 0.0001, self.z0),
+            maximum: point3(self.x1, self.k + 0.0001, self.z1),
         })
     }
 }
@@ -146,7 +146,7 @@ impl Hittable for YZRect {
     fn bounding_box(&self, _time0: Float, _time1: Float) -> Option<AABB> {
         Some(AABB {
             minimum: point3(self.k - 0.0001, self.y0, self.z0),
-            maximum: point3(self.k + 0.0001, self.y0, self.z0),
+            maximum: point3(self.k + 0.0001, self.y1, self.z1),
         })
     }
 }
