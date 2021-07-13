@@ -96,15 +96,15 @@ impl Hittable for ConstantMedium {
                     eprintln!("hit_distance = {}\nrec.t={},rec.p={:?}", hit_distance, t, p);
                 }
 
-                Some(HitRecord::new(
-                    p,
-                    vec3(1.0, 0.0, 0.0),
+                Some(HitRecord {
                     t,
-                    0.0,
-                    0.0,
-                    ray,
-                    self.phase_function.clone(),
-                ))
+                    position: p,
+                    normal: vec3(1.0, 0.0, 0.0),
+                    u: 0.0,
+                    v: 0.0,
+                    front_face: true,
+                    material: self.phase_function.clone(),
+                })
             } else {
                 None
             }
