@@ -2,6 +2,7 @@ use std::fmt::Debug;
 
 use crate::{texture::Texture, Float};
 use cgmath::{dot, vec3, InnerSpace, Point3, Vector3};
+use num_traits::FloatConst;
 use rand::Rng;
 
 use crate::{
@@ -16,10 +17,21 @@ use crate::{
 pub struct Scatter {
     pub color: Color,
     pub ray: Ray,
+    pub pdf: Float,
 }
 
 pub trait Material: Debug + Send + Sync {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter>;
+
+    fn scattering_pdf(
+        &self,
+        _ray_in: &Ray,
+        _hit_record: &HitRecord,
+        _ray_scatterd: &Ray,
+        _rng: &mut MyRng,
+    ) -> Float {
+        0.0
+    }
 
     fn emitted(&self, _u: Float, _v: Float, _p: Point3<Float>) -> Color {
         Color(vec3(0.0, 0.0, 0.0))
@@ -63,6 +75,7 @@ impl Material for Lambertian {
             color: self
                 .albedo
                 .value(hit_record.u, hit_record.v, hit_record.position),
+            pdf: dot(hit_record.normal, scatter_direction) / Float::PI(),
             ray: scatterd,
         })
     }
@@ -77,6 +90,8 @@ impl Material for Metal {
         let reflected = reflect(InnerSpace::normalize(ray.direction), hit_record.normal);
         let scatterd = reflected + self.fuzz * random_vec3_in_unit_sphere(rng);
         if dot(scatterd, hit_record.normal) > 0.0 {
+            todo!()
+            /*
             Some(Scatter {
                 color: self.albedo,
                 ray: Ray {
@@ -85,6 +100,7 @@ impl Material for Metal {
                     time: ray.time,
                 },
             })
+            */
         } else {
             None
         }
@@ -129,6 +145,8 @@ impl Material for Dielectric {
                 refract(unit_direction, hit_record.normal, refraction_ratio)
             };
 
+        todo!()
+        /*
         Some(Scatter {
             color: Color(vec3(1.0, 1.0, 1.0)),
             ray: Ray {
@@ -137,6 +155,18 @@ impl Material for Dielectric {
                 time: ray.time,
             },
         })
+        */
+    }
+
+    fn scattering_pdf(
+        &self,
+        ray_in: &Ray,
+        hit_record: &HitRecord,
+        ray_scatterd: &Ray,
+        _rng: &mut MyRng,
+    ) -> Float {
+        let cosine = dot(hit_record.normal, ray_scatterd.direction.normalize());
+        (cosine / Float::PI()).max(0.0)
     }
 }
 

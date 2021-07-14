@@ -63,6 +63,7 @@ fn ray_color<H: Hittable + ?Sized>(
         return if let Some(Scatter {
             color,
             ray: scatterd,
+            pdf,
         }) = hit_record.material.scatter(ray, &hit_record, rng)
         {
             Color(
@@ -684,7 +685,7 @@ fn main() {
 
     let mut rng = MyRng::from_entropy();
 
-    let (world, background, look_from, look_at, vfov, aperture) = match 7 {
+    let (world, background, look_from, look_at, vfov, aperture) = match 5 {
         0 => (
             random_scene(&mut rng),
             Color(vec3(0.70, 0.80, 1.00)),

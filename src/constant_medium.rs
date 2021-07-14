@@ -44,10 +44,13 @@ impl Material for Isotropic {
             .albedo
             .value(hit_record.u, hit_record.v, hit_record.position);
 
+        todo!()
+        /*
         Some(Scatter {
             ray: scattered,
             color,
         })
+        */
     }
 }
 
