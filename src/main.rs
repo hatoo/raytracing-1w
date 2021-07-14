@@ -118,14 +118,14 @@ fn ray_color<H: Hittable + ?Sized>(
 
 fn random_scene(rng: &mut impl Rng) -> BVHNode {
     let ground_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(CheckerTexture {
+        albedo: CheckerTexture {
             even: Box::new(SolidColor {
                 color_value: Color(vec3(0.2, 0.3, 0.1)),
             }),
             odd: Box::new(SolidColor {
                 color_value: Color(vec3(0.9, 0.9, 0.9)),
             }),
-        }),
+        },
     }));
 
     let mut world: Vec<Box<dyn Hittable>> = vec![Box::new(Sphere {
@@ -150,9 +150,9 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
                             Color(rng.gen::<Color>().0.mul_element_wise(rng.gen::<Color>().0));
                         let center2 = center + vec3(0.0, rng.gen_range(0.0..0.5), 0.0);
                         let material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-                            albedo: Box::new(SolidColor {
+                            albedo: SolidColor {
                                 color_value: albedo,
-                            }),
+                            },
                         }));
                         Box::new(MovingSphere {
                             center0: center,
@@ -203,9 +203,9 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
         center: point3(-4.0, 1.0, 0.0),
         radius: 1.0,
         material: Arc::new(Box::new(Lambertian {
-            albedo: Box::new(SolidColor {
+            albedo: SolidColor {
                 color_value: Color(vec3(0.4, 0.2, 0.1)),
-            }),
+            },
         })),
     }));
 
@@ -223,14 +223,14 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
 
 fn two_spheres(rng: &mut impl Rng) -> BVHNode {
     let checker_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(CheckerTexture {
+        albedo: CheckerTexture {
             even: Box::new(SolidColor {
                 color_value: Color(vec3(0.2, 0.3, 0.1)),
             }),
             odd: Box::new(SolidColor {
                 color_value: Color(vec3(0.9, 0.9, 0.9)),
             }),
-        }),
+        },
     }));
 
     let world: Vec<Box<dyn Hittable>> = vec![
@@ -251,7 +251,7 @@ fn two_spheres(rng: &mut impl Rng) -> BVHNode {
 
 fn two_perlin_spheres(rng: &mut impl Rng) -> BVHNode {
     let pertext: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(NoiseTexture256::new(4.0, rng)),
+        albedo: NoiseTexture256::new(4.0, rng),
     }));
 
     let world: Vec<Box<dyn Hittable>> = vec![
@@ -273,9 +273,7 @@ fn two_perlin_spheres(rng: &mut impl Rng) -> BVHNode {
 fn earth(rng: &mut impl Rng) -> BVHNode {
     const EARTH_JPG: &[u8] = include_bytes!("../assets/earthmap.jpg");
     let image = load_from_memory(EARTH_JPG).unwrap();
-    let earth_surface: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(image),
-    }));
+    let earth_surface: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian { albedo: image }));
 
     let globe = Box::new(Sphere {
         center: point3(0.0, 0.0, 0.0),
@@ -288,7 +286,7 @@ fn earth(rng: &mut impl Rng) -> BVHNode {
 
 fn simple_light(rng: &mut impl Rng) -> BVHNode {
     let pertext: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(NoiseTexture256::new(4.0, rng)),
+        albedo: NoiseTexture256::new(4.0, rng),
     }));
 
     let difflight: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
@@ -323,21 +321,21 @@ fn simple_light(rng: &mut impl Rng) -> BVHNode {
 
 fn cornel_box(rng: &mut impl Rng) -> BVHNode {
     let red: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.65, 0.05, 0.05)),
-        }),
+        },
     }));
 
     let white: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.73, 0.73, 0.73)),
-        }),
+        },
     }));
 
     let green: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.12, 0.45, 0.15)),
-        }),
+        },
     }));
 
     let light: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
@@ -428,21 +426,21 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
 
 fn cornel_smoke(rng: &mut impl Rng) -> BVHNode {
     let red: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.65, 0.05, 0.05)),
-        }),
+        },
     }));
 
     let white: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.73, 0.73, 0.73)),
-        }),
+        },
     }));
 
     let green: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.12, 0.45, 0.15)),
-        }),
+        },
     }));
 
     let light: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
@@ -549,9 +547,9 @@ fn cornel_smoke(rng: &mut impl Rng) -> BVHNode {
 
 fn final_scene(rng: &mut impl Rng) -> BVHNode {
     let ground: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.48, 0.83, 0.53)),
-        }),
+        },
     }));
 
     const BOXES_PER_SIDE: usize = 20;
@@ -598,9 +596,9 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
     let center2 = center1 + vec3(30.0, 0.0, 0.0);
 
     let moving_sphere_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.7, 0.3, 0.1)),
-        }),
+        },
     }));
 
     objects.push(Box::new(MovingSphere {
@@ -660,7 +658,7 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
     )));
 
     let emat: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(load_from_memory(include_bytes!("../assets/earthmap.jpg")).unwrap()),
+        albedo: load_from_memory(include_bytes!("../assets/earthmap.jpg")).unwrap(),
     }));
 
     objects.push(Box::new(Sphere {
@@ -670,7 +668,7 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
     }));
 
     let pertext: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(NoiseTexture256::new(0.1, rng)),
+        albedo: NoiseTexture256::new(0.1, rng),
     }));
     objects.push(Box::new(Sphere {
         center: point3(220.0, 280.0, 300.0),
@@ -680,9 +678,9 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
 
     let mut boxes2: Vec<Box<dyn Hittable>> = Vec::new();
     let white: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.73, 0.73, 0.73)),
-        }),
+        },
     }));
 
     let ns = 1000;

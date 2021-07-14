@@ -51,8 +51,8 @@ pub trait Material: Debug + Send + Sync {
 }
 
 #[derive(Debug)]
-pub struct Lambertian {
-    pub albedo: Box<dyn Texture>,
+pub struct Lambertian<T> {
+    pub albedo: T,
 }
 
 #[derive(Debug)]
@@ -66,7 +66,7 @@ pub struct DiffuseLight {
     pub emit: Box<dyn Texture>,
 }
 
-impl Material for Lambertian {
+impl<T: Texture> Material for Lambertian<T> {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
         let uvw = Onb::from_w(hit_record.normal);
         let scatter_direction = uvw.local(random_cosine_direction(rng)).normalize();
