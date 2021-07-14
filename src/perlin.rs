@@ -26,11 +26,12 @@ impl<const POINT_COUNT: usize> Perlin<POINT_COUNT> {
         let mut ranvec = [vec3(0.0, 0.0, 0.0); POINT_COUNT];
 
         for v in ranvec.iter_mut() {
-            *v = InnerSpace::normalize(vec3(
+            *v = vec3(
                 rng.gen_range(-1.0..1.0),
                 rng.gen_range(-1.0..1.0),
                 rng.gen_range(-1.0..1.0),
-            ));
+            )
+            .normalize();
         }
 
         Self {

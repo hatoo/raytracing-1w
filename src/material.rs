@@ -56,8 +56,7 @@ pub struct DiffuseLight {
 
 impl Material for Lambertian {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
-        let scatter_direction =
-            hit_record.normal + InnerSpace::normalize(random_vec3_in_unit_sphere(rng));
+        let scatter_direction = hit_record.normal + random_vec3_in_unit_sphere(rng).normalize();
 
         let scatter_direction = if scatter_direction.is_near_zero() {
             hit_record.normal
@@ -87,7 +86,7 @@ fn reflect(v: Vector3<Float>, n: Vector3<Float>) -> Vector3<Float> {
 
 impl Material for Metal {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
-        let reflected = reflect(InnerSpace::normalize(ray.direction), hit_record.normal);
+        let reflected = reflect(ray.direction.normalize(), hit_record.normal);
         let scatterd = reflected + self.fuzz * random_vec3_in_unit_sphere(rng);
         if dot(scatterd, hit_record.normal) > 0.0 {
             todo!()
@@ -133,7 +132,7 @@ impl Material for Dielectric {
             self.ir
         };
 
-        let unit_direction = InnerSpace::normalize(ray.direction);
+        let unit_direction = ray.direction.normalize();
         let cos_theta = dot(-unit_direction, hit_record.normal).min(1.0);
         let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
         let cannot_refract = refraction_ratio * sin_theta > 1.0;

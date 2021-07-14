@@ -34,8 +34,8 @@ impl Camera {
         let viewport_height = 2.0 * h;
         let viewport_width = aspect_ratio * viewport_height;
 
-        let w = InnerSpace::normalize(look_from - look_at);
-        let u = InnerSpace::normalize(vup.cross(w));
+        let w = (look_from - look_at).normalize();
+        let u = vup.cross(w).normalize();
         let v = w.cross(u);
 
         let origin = look_from;

@@ -19,7 +19,7 @@ pub fn random_vec3_in_unit_sphere(rng: &mut impl Rng) -> Vector3<Float> {
 
 #[allow(dead_code)]
 pub fn random_vec3_in_hemisphere(normal: Vector3<Float>, rng: &mut impl Rng) -> Vector3<Float> {
-    let v = InnerSpace::normalize(random_vec3_in_unit_sphere(rng));
+    let v = random_vec3_in_unit_sphere(rng).normalize();
     if dot(normal, v) > 0.0 {
         v
     } else {
