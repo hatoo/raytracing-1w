@@ -50,15 +50,15 @@ pub struct Translate<T> {
     pub offset: Vector3<Float>,
 }
 
-pub struct RotateY {
-    hittable: Box<dyn Hittable>,
+pub struct RotateY<T> {
+    hittable: T,
     sin_theta: Float,
     cos_theta: Float,
     aabb: Option<AABB>,
 }
 
-impl RotateY {
-    pub fn new(hittable: Box<dyn Hittable>, time0: Float, time1: Float, angle: Deg<Float>) -> Self {
+impl<T: Hittable> RotateY<T> {
+    pub fn new(hittable: T, time0: Float, time1: Float, angle: Deg<Float>) -> Self {
         let radians = Into::<Rad<Float>>::into(angle);
         let (sin_theta, cos_theta) = radians.sin_cos();
 
@@ -186,7 +186,7 @@ impl<T: Hittable> Hittable for Translate<T> {
     }
 }
 
-impl Hittable for RotateY {
+impl<T: Hittable> Hittable for RotateY<T> {
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
         let mut origin = ray.origin;
         let mut direction = ray.direction;
