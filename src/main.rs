@@ -13,6 +13,7 @@ mod material;
 mod math;
 mod moving_sphere;
 mod onb;
+mod pdf;
 mod perlin;
 mod ray;
 mod sphere;

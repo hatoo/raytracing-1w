@@ -110,9 +110,15 @@ impl<T: Hittable> RotateY<T> {
 pub trait Hittable: Send + Sync {
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord>;
     fn bounding_box(&self, time0: Float, time1: Float) -> Option<AABB>;
+    fn pdf_value(&self, _o: Point3<Float>, _v: Vector3<Float>) -> Float {
+        0.0
+    }
+    fn random(&self, _o: Vector3<Float>, _rng: &mut MyRng) -> Vector3<Float> {
+        vec3(1.0, 0.0, 0.0)
+    }
 }
 
-impl Hittable for Box<dyn Hittable> {
+impl<T: Hittable> Hittable for Box<T> {
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
         self.as_ref().hit(ray, t_min, t_max, rng)
     }
