@@ -1,6 +1,11 @@
 use std::fmt::Debug;
 
-use crate::{math::random_vec3_in_hemisphere, texture::Texture, Float};
+use crate::{
+    math::{random_cosine_direction, random_vec3_in_hemisphere},
+    onb::Onb,
+    texture::Texture,
+    Float,
+};
 use cgmath::{dot, vec3, InnerSpace, Point3, Vector3};
 use num_traits::FloatConst;
 use rand::Rng;
@@ -56,15 +61,8 @@ pub struct DiffuseLight {
 
 impl Material for Lambertian {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
-        // let scatter_direction = hit_record.normal + random_vec3_in_unit_sphere(rng).normalize();
-        let scatter_direction = random_vec3_in_hemisphere(hit_record.normal, rng);
-
-        let scatter_direction = if scatter_direction.is_near_zero() {
-            hit_record.normal
-        } else {
-            scatter_direction
-        }
-        .normalize();
+        let uvw = Onb::from_w(hit_record.normal);
+        let scatter_direction = uvw.local(random_cosine_direction(rng)).normalize();
 
         let scatterd = Ray {
             origin: hit_record.position,
@@ -76,7 +74,7 @@ impl Material for Lambertian {
             color: self
                 .albedo
                 .value(hit_record.u, hit_record.v, hit_record.position),
-            pdf: 0.5 / Float::PI(),
+            pdf: dot(uvw.w, scatter_direction) / Float::PI(),
             ray: scatterd,
         })
     }

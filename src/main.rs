@@ -12,6 +12,7 @@ mod hittable;
 mod material;
 mod math;
 mod moving_sphere;
+mod onb;
 mod perlin;
 mod ray;
 mod sphere;

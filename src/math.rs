@@ -36,6 +36,18 @@ pub fn random_vec3_in_unit_disk(rng: &mut impl Rng) -> Vector3<Float> {
     }
 }
 
+pub fn random_cosine_direction(rng: &mut impl Rng) -> Vector3<Float> {
+    let r1: Float = rng.gen();
+    let r2: Float = rng.gen();
+    let z = (1.0 - r2).sqrt();
+
+    let phi = 2.0 * Float::PI() * r1;
+    let x = phi.cos() * r2.sqrt();
+    let y = phi.sin() * r2.sqrt();
+
+    vec3(x, y, z)
+}
+
 pub fn sphere_uv(point: Point3<Float>) -> (Float, Float) {
     let theta = (-point.y).acos();
     let phi = (-point.z).atan2(point.x) + Float::PI();
