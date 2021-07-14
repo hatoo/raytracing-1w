@@ -63,11 +63,10 @@ impl Camera {
 
         Ray {
             origin: self.origin + offset,
-            direction: EuclideanSpace::to_vec(
-                self.lower_left_corner + s * self.horizontal + t * self.vertical
-                    - EuclideanSpace::to_vec(self.origin)
-                    - offset,
-            ),
+            direction: (self.lower_left_corner + s * self.horizontal + t * self.vertical
+                - self.origin.to_vec()
+                - offset)
+                .to_vec(),
             time: rng.gen_range(self.time0..self.time1),
         }
     }
