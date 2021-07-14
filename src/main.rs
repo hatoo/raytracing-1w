@@ -57,9 +57,13 @@ fn ray_color<H: Hittable + ?Sized>(
         return Color(vec3(0.0, 0.0, 0.0));
     }
     if let Some(hit_record) = world.hit(ray, 0.001, Float::INFINITY, rng) {
-        let emitted = hit_record
-            .material
-            .emitted(hit_record.u, hit_record.v, hit_record.position);
+        let emitted = hit_record.material.emitted(
+            ray,
+            &hit_record,
+            hit_record.u,
+            hit_record.v,
+            hit_record.position,
+        );
 
         return if let Some(Scatter {
             color,
@@ -764,7 +768,7 @@ fn main() {
         5 => {
             aspect_ratio = 1.0;
             image_width = 600;
-            samples_per_pixel = 200;
+            samples_per_pixel = 10;
             (
                 cornel_box(&mut rng),
                 Color(vec3(0.0, 0.0, 0.0)),

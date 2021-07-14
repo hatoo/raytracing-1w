@@ -38,7 +38,14 @@ pub trait Material: Debug + Send + Sync {
         0.0
     }
 
-    fn emitted(&self, _u: Float, _v: Float, _p: Point3<Float>) -> Color {
+    fn emitted(
+        &self,
+        ray_in: &Ray,
+        hit_record: &HitRecord,
+        _u: Float,
+        _v: Float,
+        _p: Point3<Float>,
+    ) -> Color {
         Color(vec3(0.0, 0.0, 0.0))
     }
 }
@@ -174,7 +181,18 @@ impl Material for DiffuseLight {
         None
     }
 
-    fn emitted(&self, u: Float, v: Float, p: Point3<Float>) -> Color {
-        self.emit.value(u, v, p)
+    fn emitted(
+        &self,
+        ray_in: &Ray,
+        hit_record: &HitRecord,
+        u: Float,
+        v: Float,
+        p: Point3<Float>,
+    ) -> Color {
+        if hit_record.front_face {
+            self.emit.value(u, v, p)
+        } else {
+            Color(vec3(0.0, 0.0, 0.0))
+        }
     }
 }
