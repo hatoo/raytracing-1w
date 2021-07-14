@@ -68,8 +68,12 @@ fn ray_color<H: Hittable + ?Sized>(
         {
             Color(
                 emitted.0
-                    + color.0.mul_element_wise(
-                        ray_color(&scatterd, background, world, depth - 1, rng).0,
+                    + (color.0
+                        * hit_record
+                            .material
+                            .scattering_pdf(ray, &hit_record, &scatterd, rng))
+                    .mul_element_wise(
+                        ray_color(&scatterd, background, world, depth - 1, rng).0 / pdf,
                     ),
             )
         } else {

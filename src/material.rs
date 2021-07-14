@@ -62,7 +62,8 @@ impl Material for Lambertian {
             hit_record.normal
         } else {
             scatter_direction
-        };
+        }
+        .normalize();
 
         let scatterd = Ray {
             origin: hit_record.position,
@@ -77,6 +78,17 @@ impl Material for Lambertian {
             pdf: dot(hit_record.normal, scatter_direction) / Float::PI(),
             ray: scatterd,
         })
+    }
+
+    fn scattering_pdf(
+        &self,
+        _ray_in: &Ray,
+        hit_record: &HitRecord,
+        ray_scatterd: &Ray,
+        _rng: &mut MyRng,
+    ) -> Float {
+        let cosine = dot(hit_record.normal, ray_scatterd.direction.normalize());
+        (cosine / Float::PI()).max(0.0)
     }
 }
 
@@ -155,17 +167,6 @@ impl Material for Dielectric {
             },
         })
         */
-    }
-
-    fn scattering_pdf(
-        &self,
-        ray_in: &Ray,
-        hit_record: &HitRecord,
-        ray_scatterd: &Ray,
-        _rng: &mut MyRng,
-    ) -> Float {
-        let cosine = dot(hit_record.normal, ray_scatterd.direction.normalize());
-        (cosine / Float::PI()).max(0.0)
     }
 }
 
