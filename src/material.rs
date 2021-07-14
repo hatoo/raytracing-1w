@@ -1,22 +1,11 @@
 use std::fmt::Debug;
 
-use crate::{
-    math::{random_cosine_direction, random_vec3_in_hemisphere},
-    onb::Onb,
-    texture::Texture,
-    Float,
-};
+use crate::{math::random_cosine_direction, onb::Onb, texture::Texture, Float};
 use cgmath::{dot, vec3, InnerSpace, Point3, Vector3};
 use num_traits::FloatConst;
 use rand::Rng;
 
-use crate::{
-    color::Color,
-    hittable::HitRecord,
-    math::{random_vec3_in_unit_sphere, IsNearZero},
-    ray::Ray,
-    MyRng,
-};
+use crate::{color::Color, hittable::HitRecord, math::random_vec3_in_unit_sphere, ray::Ray, MyRng};
 
 #[derive(Debug, Clone)]
 pub struct Scatter {
@@ -40,8 +29,8 @@ pub trait Material: Debug + Send + Sync {
 
     fn emitted(
         &self,
-        ray_in: &Ray,
-        hit_record: &HitRecord,
+        _ray_in: &Ray,
+        _hit_record: &HitRecord,
         _u: Float,
         _v: Float,
         _p: Point3<Float>,
@@ -62,8 +51,8 @@ pub struct Metal {
 }
 
 #[derive(Debug)]
-pub struct DiffuseLight {
-    pub emit: Box<dyn Texture>,
+pub struct DiffuseLight<T> {
+    pub emit: T,
 }
 
 impl<T: Texture> Material for Lambertian<T> {
@@ -176,7 +165,7 @@ impl Material for Dielectric {
     }
 }
 
-impl Material for DiffuseLight {
+impl<T: Texture> Material for DiffuseLight<T> {
     fn scatter(&self, _ray: &Ray, _hit_record: &HitRecord, _rng: &mut MyRng) -> Option<Scatter> {
         None
     }

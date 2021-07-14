@@ -290,9 +290,9 @@ fn simple_light(rng: &mut impl Rng) -> BVHNode {
     }));
 
     let difflight: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
-        emit: Box::new(SolidColor {
+        emit: SolidColor {
             color_value: Color(vec3(4.0, 4.0, 4.0)),
-        }),
+        },
     }));
 
     let world: Vec<Box<dyn Hittable>> = vec![
@@ -339,9 +339,9 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
     }));
 
     let light: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
-        emit: Box::new(SolidColor {
+        emit: SolidColor {
             color_value: Color(vec3(15.0, 15.0, 15.0)),
-        }),
+        },
     }));
 
     let box1 = AABox::new(
@@ -444,9 +444,9 @@ fn cornel_smoke(rng: &mut impl Rng) -> BVHNode {
     }));
 
     let light: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
-        emit: Box::new(SolidColor {
+        emit: SolidColor {
             color_value: Color(vec3(15.0, 15.0, 15.0)),
-        }),
+        },
     }));
 
     let box1 = AABox::new(
@@ -578,9 +578,9 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
     let mut objects: Vec<Box<dyn Hittable>> = vec![Box::new(BVHNode::new(boxes1, 0.0, 1.0, rng))];
 
     let light: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
-        emit: Box::new(SolidColor {
+        emit: SolidColor {
             color_value: Color(vec3(7.0, 7.0, 7.0)),
-        }),
+        },
     }));
 
     objects.push(Box::new(XZRect {
