@@ -39,7 +39,7 @@ use crate::{
     camera::Camera,
     color::SampledColor,
     constant_medium::ConstantMedium,
-    hittable::{RotateY, Translate},
+    hittable::{FlipFace, RotateY, Translate},
     material::{Dielectric, DiffuseLight, Lambertian, Material, Metal},
     moving_sphere::MovingSphere,
     sphere::Sphere,
@@ -387,14 +387,14 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
             k: 0.0,
             material: red,
         }),
-        Box::new(XZRect {
+        Box::new(FlipFace(XZRect {
             x0: 213.0,
             x1: 343.0,
             z0: 227.0,
             z1: 332.0,
             k: 554.0,
             material: light,
-        }),
+        })),
         Box::new(XZRect {
             x0: 0.0,
             x1: 555.0,

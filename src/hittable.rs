@@ -57,6 +57,8 @@ pub struct RotateY<T> {
     aabb: Option<AABB>,
 }
 
+pub struct FlipFace<T>(pub T);
+
 impl<T: Hittable> RotateY<T> {
     pub fn new(hittable: T, time0: Float, time1: Float, angle: Deg<Float>) -> Self {
         let radians = Into::<Rad<Float>>::into(angle);
@@ -233,5 +235,18 @@ impl<T: Hittable> Hittable for RotateY<T> {
 
     fn bounding_box(&self, _time0: Float, _time1: Float) -> Option<AABB> {
         self.aabb
+    }
+}
+
+impl<T: Hittable> Hittable for FlipFace<T> {
+    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
+        self.0.hit(ray, t_min, t_max, rng).map(|mut hit_record| {
+            hit_record.front_face = !hit_record.front_face;
+            hit_record
+        })
+    }
+
+    fn bounding_box(&self, time0: Float, time1: Float) -> Option<AABB> {
+        self.0.bounding_box(time0, time1)
     }
 }
