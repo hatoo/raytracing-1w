@@ -45,8 +45,8 @@ impl HitRecord {
     }
 }
 
-pub struct Translate {
-    pub hittable: Box<dyn Hittable>,
+pub struct Translate<T> {
+    pub hittable: T,
     pub offset: Vector3<Float>,
 }
 
@@ -155,7 +155,7 @@ impl<T: Hittable> Hittable for [T] {
     }
 }
 
-impl Hittable for Translate {
+impl<T: Hittable> Hittable for Translate<T> {
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
         let moved = Ray {
             origin: ray.origin - self.offset,

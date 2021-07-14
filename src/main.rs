@@ -352,7 +352,7 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
         white.clone(),
         rng,
     ));
-    let box1 = Box::new(RotateY::new(box1, 0.0, 1.0, Deg(15.0)));
+    let box1 = RotateY::new(box1, 0.0, 1.0, Deg(15.0));
     let box1 = Box::new(Translate {
         hittable: box1,
         offset: vec3(265.0, 0.0, 295.0),
@@ -364,7 +364,7 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
         white.clone(),
         rng,
     ));
-    let box2 = Box::new(RotateY::new(box2, 0.0, 1.0, Deg(-18.0)));
+    let box2 = RotateY::new(box2, 0.0, 1.0, Deg(-18.0));
     let box2 = Box::new(Translate {
         hittable: box2,
         offset: vec3(130.0, 0.0, 65.0),
@@ -457,7 +457,7 @@ fn cornel_smoke(rng: &mut impl Rng) -> BVHNode {
         white.clone(),
         rng,
     ));
-    let box1 = Box::new(RotateY::new(box1, 0.0, 1.0, Deg(15.0)));
+    let box1 = RotateY::new(box1, 0.0, 1.0, Deg(15.0));
     let box1 = Box::new(Translate {
         hittable: box1,
         offset: vec3(265.0, 0.0, 295.0),
@@ -469,7 +469,7 @@ fn cornel_smoke(rng: &mut impl Rng) -> BVHNode {
         white.clone(),
         rng,
     ));
-    let box2 = Box::new(RotateY::new(box2, 0.0, 1.0, Deg(-18.0)));
+    let box2 = RotateY::new(box2, 0.0, 1.0, Deg(-18.0));
     let box2 = Box::new(Translate {
         hittable: box2,
         offset: vec3(130.0, 0.0, 65.0),
@@ -698,13 +698,14 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
         }))
     }
 
-    let boxes2 = Box::new(RotateY::new(
+    let boxes2 = RotateY::new(
         Box::new(BVHNode::new(boxes2, 0.0, 1.0, rng)),
         0.0,
         1.0,
         Deg(15.0),
-    ));
-    let boxes2 = Box::new(Translate {
+    );
+
+    let boxes2: Box<dyn Hittable> = Box::new(Translate {
         hittable: boxes2,
         offset: vec3(-100.0, 270.0, 395.0),
     });
