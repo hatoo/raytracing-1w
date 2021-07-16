@@ -1,21 +1,28 @@
 use std::fmt::Debug;
 
-use crate::{math::random_cosine_direction, onb::Onb, texture::Texture, Float};
+use crate::{
+    math::random_cosine_direction,
+    onb::Onb,
+    pdf::{CosinePdf, Pdf},
+    texture::Texture,
+    Float,
+};
 use cgmath::{dot, vec3, InnerSpace, Point3, Vector3};
 use num_traits::FloatConst;
 use rand::Rng;
 
 use crate::{color::Color, hittable::HitRecord, math::random_vec3_in_unit_sphere, ray::Ray, MyRng};
 
-#[derive(Debug, Clone)]
 pub struct Scatter {
-    pub color: Color,
-    pub ray: Ray,
-    pub pdf: Float,
+    pub specular_ray: Option<Ray>,
+    pub attenuation: Color,
+    pub pdf: Box<dyn Pdf>,
 }
 
 pub trait Material: Debug + Send + Sync {
-    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter>;
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
+        None
+    }
 
     fn scattering_pdf(
         &self,
@@ -55,6 +62,8 @@ pub struct DiffuseLight<T> {
     pub emit: T,
 }
 
+impl Material for () {}
+
 impl<T: Texture> Material for Lambertian<T> {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
         let uvw = Onb::from_w(hit_record.normal);
@@ -67,11 +76,13 @@ impl<T: Texture> Material for Lambertian<T> {
         };
 
         Some(Scatter {
-            color: self
+            attenuation: self
                 .albedo
                 .value(hit_record.u, hit_record.v, hit_record.position),
-            pdf: dot(uvw.w, scatter_direction) / Float::PI(),
-            ray: scatterd,
+            pdf: Box::new(CosinePdf {
+                uvw: Onb::from_w(hit_record.normal),
+            }),
+            specular_ray: None,
         })
     }
 

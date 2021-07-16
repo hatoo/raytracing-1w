@@ -23,6 +23,16 @@ pub struct MixturePdf<P0, P1> {
     pub p1: P1,
 }
 
+impl Pdf for Box<dyn Pdf> {
+    fn value(&self, direction: Vector3<Float>, rng: &mut MyRng) -> Float {
+        self.as_ref().value(direction, rng)
+    }
+
+    fn generate(&self, rng: &mut MyRng) -> Vector3<Float> {
+        self.as_ref().generate(rng)
+    }
+}
+
 impl Pdf for CosinePdf {
     fn value(&self, direction: Vector3<Float>, _rng: &mut MyRng) -> Float {
         let cosine = dot(direction.normalize(), self.uvw.w);

@@ -49,7 +49,7 @@ use crate::{
     texture::{CheckerTexture, NoiseTexture256, SolidColor},
 };
 
-fn ray_color<H: Hittable + ?Sized, L: Hittable>(
+fn ray_color<H: Hittable, L: Hittable>(
     ray: &Ray,
     background: Color,
     world: &H,
@@ -70,8 +70,8 @@ fn ray_color<H: Hittable + ?Sized, L: Hittable>(
         );
 
         return if let Some(Scatter {
-            color,
-            ray: scatterd,
+            attenuation,
+            specular_ray,
             pdf,
         }) = hit_record.material.scatter(ray, &hit_record, rng)
         {
@@ -80,11 +80,7 @@ fn ray_color<H: Hittable + ?Sized, L: Hittable>(
                 o: hit_record.position,
             };
 
-            let p1 = CosinePdf {
-                uvw: Onb::from_w(hit_record.normal),
-            };
-
-            let mixed_pdf = MixturePdf { p0, p1 };
+            let mixed_pdf = MixturePdf { p0, p1: pdf };
 
             let scatterd = Ray {
                 origin: hit_record.position,
@@ -96,7 +92,7 @@ fn ray_color<H: Hittable + ?Sized, L: Hittable>(
 
             Color(
                 emitted.0
-                    + (color.0
+                    + (attenuation.0
                         * hit_record
                             .material
                             .scattering_pdf(ray, &hit_record, &scatterd, rng))
@@ -711,20 +707,23 @@ fn main() {
 
     let mut rng = MyRng::from_entropy();
 
-    let light: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
-        emit: SolidColor {
-            color_value: Color(vec3(15.0, 15.0, 15.0)),
-        },
-    }));
+    let null_mat: Arc<Box<dyn Material>> = Arc::new(Box::new(()));
 
-    let lights = XZRect {
-        x0: 213.0,
-        x1: 343.0,
-        z0: 227.0,
-        z1: 332.0,
-        k: 554.0,
-        material: light,
-    };
+    let lights: Vec<Box<dyn Hittable>> = vec![
+        Box::new(XZRect {
+            x0: 213.0,
+            x1: 343.0,
+            z0: 227.0,
+            z1: 332.0,
+            k: 554.0,
+            material: null_mat.clone(),
+        }),
+        Box::new(Sphere {
+            center: point3(190.0, 90.0, 190.0),
+            radius: 90.0,
+            material: null_mat,
+        }),
+    ];
 
     let (world, background, look_from, look_at, vfov, aperture) = match 5 {
         0 => (
@@ -773,7 +772,7 @@ fn main() {
         5 => {
             aspect_ratio = 1.0;
             image_width = 600;
-            samples_per_pixel = 1000;
+            samples_per_pixel = 10;
             (
                 cornel_box(&mut rng),
                 Color(vec3(0.0, 0.0, 0.0)),
