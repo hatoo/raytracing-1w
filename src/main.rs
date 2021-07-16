@@ -28,10 +28,10 @@ use cgmath::{dot, point3, prelude::*, vec3, Deg};
 use color::Color;
 use hittable::Hittable;
 use image::load_from_memory;
-use material::Scatter;
+use material::{Scatter, ScatterKind};
 use onb::Onb;
 use pdf::{CosinePdf, HittablePdf, MixturePdf, Pdf};
-use rand::prelude::*;
+use rand::{distributions::weighted::alias_method, prelude::*};
 use ray::Ray;
 use rayon::prelude::*;
 
@@ -69,37 +69,45 @@ fn ray_color<H: Hittable, L: Hittable>(
             hit_record.position,
         );
 
-        return if let Some(Scatter {
-            attenuation,
-            specular_ray,
-            pdf,
-        }) = hit_record.material.scatter(ray, &hit_record, rng)
+        return if let Some(Scatter { attenuation, kind }) =
+            hit_record.material.scatter(ray, &hit_record, rng)
         {
-            let p0 = HittablePdf {
-                hittable: lights,
-                o: hit_record.position,
-            };
+            match kind {
+                ScatterKind::Pdf(pdf) => {
+                    let p0 = HittablePdf {
+                        hittable: lights,
+                        o: hit_record.position,
+                    };
 
-            let mixed_pdf = MixturePdf { p0, p1: pdf };
+                    let mixed_pdf = MixturePdf { p0, p1: pdf };
 
-            let scatterd = Ray {
-                origin: hit_record.position,
-                direction: mixed_pdf.generate(rng),
-                time: hit_record.t,
-            };
+                    let scatterd = Ray {
+                        origin: hit_record.position,
+                        direction: mixed_pdf.generate(rng),
+                        time: hit_record.t,
+                    };
 
-            let pdf = mixed_pdf.value(scatterd.direction, rng);
+                    let pdf = mixed_pdf.value(scatterd.direction, rng);
 
-            Color(
-                emitted.0
-                    + (attenuation.0
-                        * hit_record
-                            .material
-                            .scattering_pdf(ray, &hit_record, &scatterd, rng))
-                    .mul_element_wise(
-                        ray_color(&scatterd, background, world, lights, depth - 1, rng).0 / pdf,
-                    ),
-            )
+                    Color(
+                        emitted.0
+                            + (attenuation.0
+                                * hit_record.material.scattering_pdf(
+                                    ray,
+                                    &hit_record,
+                                    &scatterd,
+                                    rng,
+                                ))
+                            .mul_element_wise(
+                                ray_color(&scatterd, background, world, lights, depth - 1, rng).0
+                                    / pdf,
+                            ),
+                    )
+                }
+                ScatterKind::Spacular(specular_ray) => Color(attenuation.0.mul_element_wise(
+                    ray_color(&specular_ray, background, world, lights, depth - 1, rng).0,
+                )),
+            }
         } else {
             emitted
         };
@@ -336,10 +344,15 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
         },
     }));
 
+    let aluminum: Arc<Box<dyn Material>> = Arc::new(Box::new(Metal {
+        fuzz: 0.0,
+        albedo: Color(vec3(0.8, 0.85, 0.88)),
+    }));
+
     let box1 = AABox::new(
         point3(0.0, 0.0, 0.0),
         point3(165.0, 330.0, 165.0),
-        white.clone(),
+        aluminum,
         rng,
     );
     let box1 = RotateY::new(box1, 0.0, 1.0, Deg(15.0));
@@ -359,6 +372,8 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
         hittable: box2,
         offset: vec3(130.0, 0.0, 65.0),
     });
+
+    let grass: Arc<Box<dyn Material>> = Arc::new(Box::new(Dielectric { ir: 1.5 }));
 
     let world: Vec<Box<dyn Hittable>> = vec![
         Box::new(YZRect {
@@ -411,6 +426,13 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
         }),
         box1,
         box2,
+        /*
+        Box::new(Sphere {
+            center: point3(190.0, 90.0, 190.0),
+            radius: 90.0,
+            material: grass,
+        }),
+        */
     ];
 
     BVHNode::new(world, 0.0, 1.0, rng)

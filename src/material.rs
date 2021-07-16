@@ -13,10 +13,14 @@ use rand::Rng;
 
 use crate::{color::Color, hittable::HitRecord, math::random_vec3_in_unit_sphere, ray::Ray, MyRng};
 
+pub enum ScatterKind {
+    Spacular(Ray),
+    Pdf(Box<dyn Pdf>),
+}
+
 pub struct Scatter {
-    pub specular_ray: Option<Ray>,
+    pub kind: ScatterKind,
     pub attenuation: Color,
-    pub pdf: Box<dyn Pdf>,
 }
 
 pub trait Material: Debug + Send + Sync {
@@ -65,24 +69,14 @@ pub struct DiffuseLight<T> {
 impl Material for () {}
 
 impl<T: Texture> Material for Lambertian<T> {
-    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
-        let uvw = Onb::from_w(hit_record.normal);
-        let scatter_direction = uvw.local(random_cosine_direction(rng)).normalize();
-
-        let scatterd = Ray {
-            origin: hit_record.position,
-            direction: scatter_direction,
-            time: ray.time,
-        };
-
+    fn scatter(&self, _ray: &Ray, hit_record: &HitRecord, _rng: &mut MyRng) -> Option<Scatter> {
         Some(Scatter {
             attenuation: self
                 .albedo
                 .value(hit_record.u, hit_record.v, hit_record.position),
-            pdf: Box::new(CosinePdf {
+            kind: ScatterKind::Pdf(Box::new(CosinePdf {
                 uvw: Onb::from_w(hit_record.normal),
-            }),
-            specular_ray: None,
+            })),
         })
     }
 
@@ -105,22 +99,16 @@ fn reflect(v: Vector3<Float>, n: Vector3<Float>) -> Vector3<Float> {
 impl Material for Metal {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
         let reflected = reflect(ray.direction.normalize(), hit_record.normal);
-        let scatterd = reflected + self.fuzz * random_vec3_in_unit_sphere(rng);
-        if dot(scatterd, hit_record.normal) > 0.0 {
-            todo!()
-            /*
-            Some(Scatter {
-                color: self.albedo,
-                ray: Ray {
-                    origin: hit_record.position,
-                    direction: scatterd,
-                    time: ray.time,
-                },
-            })
-            */
-        } else {
-            None
-        }
+        let spacular_ray = Ray {
+            origin: hit_record.position,
+            direction: reflected + self.fuzz * random_vec3_in_unit_sphere(rng),
+            time: ray.time,
+        };
+
+        Some(Scatter {
+            kind: ScatterKind::Spacular(spacular_ray),
+            attenuation: self.albedo,
+        })
     }
 }
 
@@ -162,17 +150,14 @@ impl Material for Dielectric {
                 refract(unit_direction, hit_record.normal, refraction_ratio)
             };
 
-        todo!()
-        /*
         Some(Scatter {
-            color: Color(vec3(1.0, 1.0, 1.0)),
-            ray: Ray {
+            attenuation: Color(vec3(1.0, 1.0, 1.0)),
+            kind: ScatterKind::Spacular(Ray {
                 origin: hit_record.position,
-                direction: direction,
+                direction,
                 time: ray.time,
-            },
+            }),
         })
-        */
     }
 }
 
