@@ -10,6 +10,12 @@ On `week-end` brnach.
 
 # Ray Tracing: The Next Week
 
-On `master` branch.
+On `next-week` branch.
 
 ![Next Week](next_week.png)
+
+# Ray Tracing: The Rest of Your Life
+
+On `master` branch.
+
+![Rest of Your Life](rest_of_your_life.png)
