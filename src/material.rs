@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 
 use crate::{
-    math::random_cosine_direction,
     onb::Onb,
     pdf::{CosinePdf, Pdf},
     texture::Texture,

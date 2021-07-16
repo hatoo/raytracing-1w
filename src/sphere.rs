@@ -9,7 +9,7 @@ use crate::{
     material::Material,
     math::{random_to_sphere, sphere_uv},
     onb::Onb,
-    ray::{self, Ray},
+    ray::Ray,
     Float, MyRng,
 };
 

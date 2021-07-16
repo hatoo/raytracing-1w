@@ -24,14 +24,13 @@ use std::sync::{
     Arc,
 };
 
-use cgmath::{dot, point3, prelude::*, vec3, Deg};
+use cgmath::{point3, prelude::*, vec3, Deg};
 use color::Color;
 use hittable::Hittable;
 use image::load_from_memory;
 use material::{Scatter, ScatterKind};
-use onb::Onb;
-use pdf::{CosinePdf, HittablePdf, MixturePdf, Pdf};
-use rand::{distributions::weighted::alias_method, prelude::*};
+use pdf::{HittablePdf, MixturePdf, Pdf};
+use rand::prelude::*;
 use ray::Ray;
 use rayon::prelude::*;
 

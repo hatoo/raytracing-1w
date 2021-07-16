@@ -1,5 +1,5 @@
 use crate::Float;
-use cgmath::{dot, vec3, InnerSpace, One, Point3, Vector3};
+use cgmath::{dot, vec3, InnerSpace, Point3, Vector3};
 use num_traits::float::FloatConst;
 use rand::prelude::*;
 
