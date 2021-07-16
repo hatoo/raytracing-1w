@@ -71,7 +71,7 @@ pub trait Hittable: Send + Sync {
     }
 }
 
-impl<T: Hittable> Hittable for &T {
+impl<T: Hittable + ?Sized> Hittable for &T {
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
         (*self).hit(ray, t_min, t_max, rng)
     }
@@ -108,53 +108,6 @@ impl<T: Hittable + ?Sized> Hittable for Box<T> {
 }
 
 impl<T: Hittable> Hittable for [T] {
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
-        let mut hit_record = None;
-        let mut closest_so_far = t_max;
-
-        for hittable in self {
-            if let Some(new_hit_record) = hittable.hit(ray, t_min, closest_so_far, rng) {
-                closest_so_far = new_hit_record.t;
-                hit_record = Some(new_hit_record);
-            }
-        }
-
-        hit_record
-    }
-
-    fn bounding_box(&self, time0: Float, time1: Float) -> Option<AABB> {
-        let mut b = None;
-
-        for hittable in self {
-            if let Some(b0) = hittable.bounding_box(time0, time1) {
-                b = Some(if let Some(b) = b {
-                    surrounding_box(b, b0)
-                } else {
-                    b0
-                });
-            } else {
-                {
-                    return None;
-                }
-            }
-        }
-        b
-    }
-
-    fn pdf_value(&self, o: Point3<Float>, v: Vector3<Float>, rng: &mut MyRng) -> Float {
-        let weight = 1.0 / self.len() as Float;
-
-        self.iter()
-            .map(|hittable| weight * hittable.pdf_value(o, v, rng))
-            .sum()
-    }
-
-    fn random(&self, o: Vector3<Float>, rng: &mut MyRng) -> Vector3<Float> {
-        self.choose(rng).unwrap().random(o, rng)
-    }
-}
-
-impl<T: Hittable> Hittable for Vec<T> {
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
         let mut hit_record = None;
         let mut closest_so_far = t_max;

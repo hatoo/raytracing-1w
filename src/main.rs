@@ -48,7 +48,7 @@ use crate::{
     texture::{CheckerTexture, NoiseTexture256, SolidColor},
 };
 
-fn ray_color<H: Hittable, L: Hittable>(
+fn ray_color<H: Hittable + ?Sized, L: Hittable + ?Sized>(
     ray: &Ray,
     background: Color,
     world: &H,
@@ -728,7 +728,7 @@ fn main() {
 
     let null_mat: Arc<Box<dyn Material>> = Arc::new(Box::new(()));
 
-    let lights: Vec<Box<dyn Hittable>> = vec![
+    let lights: &[Box<dyn Hittable>] = &[
         Box::new(XZRect {
             x0: 213.0,
             x1: 343.0,
@@ -864,7 +864,7 @@ fn main() {
                         let ray = camera.get_ray(u, v, &mut rng);
                         pixel_color = Color(
                             pixel_color.0
-                                + ray_color(&ray, background, &world, &lights, MAX_DEPTH, &mut rng)
+                                + ray_color(&ray, background, &world, lights, MAX_DEPTH, &mut rng)
                                     .0,
                         );
                     }
