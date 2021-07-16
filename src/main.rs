@@ -709,6 +709,7 @@ fn main() {
 
     let null_mat: Arc<Box<dyn Material>> = Arc::new(Box::new(()));
 
+    /*
     let lights: Vec<Box<dyn Hittable>> = vec![
         Box::new(XZRect {
             x0: 213.0,
@@ -724,6 +725,15 @@ fn main() {
             material: null_mat,
         }),
     ];
+    */
+    let lights = XZRect {
+        x0: 213.0,
+        x1: 343.0,
+        z0: 227.0,
+        z1: 332.0,
+        k: 554.0,
+        material: null_mat.clone(),
+    };
 
     let (world, background, look_from, look_at, vfov, aperture) = match 5 {
         0 => (
