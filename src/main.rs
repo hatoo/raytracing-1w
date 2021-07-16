@@ -29,6 +29,8 @@ use color::Color;
 use hittable::Hittable;
 use image::load_from_memory;
 use material::Scatter;
+use onb::Onb;
+use pdf::{CosinePdf, Pdf};
 use rand::prelude::*;
 use ray::Ray;
 use rayon::prelude::*;
@@ -72,32 +74,17 @@ fn ray_color<H: Hittable + ?Sized>(
             pdf,
         }) = hit_record.material.scatter(ray, &hit_record, rng)
         {
-            let on_light = point3(
-                rng.gen_range(213.0..343.0),
-                554.0,
-                rng.gen_range(227.0..332.0),
-            );
-            let to_light = on_light - hit_record.position;
-            let distance_squared = to_light.magnitude2();
-            let to_light = to_light.normalize();
+            let cosine_pdf = CosinePdf {
+                uvw: Onb::from_w(hit_record.normal),
+            };
 
-            if dot(to_light, hit_record.normal) < 0.0 {
-                return emitted;
-            }
-
-            let light_area = (343.0 - 213.0) * (332.0 - 227.0);
-            let light_cosine = to_light.y.abs();
-
-            if light_cosine < 0.000001 {
-                return emitted;
-            }
-
-            let pdf = distance_squared / (light_cosine * light_area);
             let scatterd = Ray {
                 origin: hit_record.position,
-                direction: to_light,
+                direction: cosine_pdf.generate(rng),
                 time: hit_record.t,
             };
+
+            let pdf = cosine_pdf.value(scatterd.direction);
 
             Color(
                 emitted.0
