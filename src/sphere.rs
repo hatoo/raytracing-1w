@@ -1,12 +1,15 @@
 use std::sync::Arc;
 
 use cgmath::{dot, prelude::*, vec3, Point3};
+use num_traits::FloatConst;
 
 use crate::{
     aabb::AABB,
     hittable::{HitRecord, Hittable},
     material::Material,
-    math::sphere_uv,
+    math::{random_to_sphere, sphere_uv},
+    onb::Onb,
+    ray::{self, Ray},
     Float, MyRng,
 };
 
@@ -63,5 +66,34 @@ impl Hittable for Sphere {
             minimum: self.center - vec3(self.radius, self.radius, self.radius),
             maximum: self.center + vec3(self.radius, self.radius, self.radius),
         })
+    }
+
+    fn pdf_value(&self, o: Point3<Float>, v: cgmath::Vector3<Float>, rng: &mut MyRng) -> Float {
+        self.hit(
+            &Ray {
+                origin: o,
+                direction: v,
+                time: 0.0,
+            },
+            0.001,
+            Float::INFINITY,
+            rng,
+        )
+        .map(|_| {
+            let cos_theta_max =
+                (1.0 - self.radius * self.radius / (self.center - o).magnitude2()).sqrt();
+            let solid_angle = 2.0 * Float::PI() * (1.0 - cos_theta_max);
+            1.0 / solid_angle
+        })
+        .unwrap_or(0.0)
+    }
+
+    fn random(&self, o: cgmath::Vector3<Float>, rng: &mut MyRng) -> cgmath::Vector3<Float> {
+        let direction = (self.center - o).to_vec();
+        let distance_squared = direction.magnitude2();
+
+        let uvw = Onb::from_w(direction);
+
+        uvw.local(random_to_sphere(self.radius, distance_squared, rng))
     }
 }

@@ -1,5 +1,5 @@
 use crate::Float;
-use cgmath::{dot, vec3, InnerSpace, Point3, Vector3};
+use cgmath::{dot, vec3, InnerSpace, One, Point3, Vector3};
 use num_traits::float::FloatConst;
 use rand::prelude::*;
 
@@ -44,6 +44,22 @@ pub fn random_cosine_direction(rng: &mut impl Rng) -> Vector3<Float> {
     let phi = 2.0 * Float::PI() * r1;
     let x = phi.cos() * r2.sqrt();
     let y = phi.sin() * r2.sqrt();
+
+    vec3(x, y, z)
+}
+
+pub fn random_to_sphere(
+    radius: Float,
+    distance_squared: Float,
+    rng: &mut impl Rng,
+) -> Vector3<Float> {
+    let r1 = rng.gen::<Float>();
+    let r2 = rng.gen::<Float>();
+    let z = 1.0 + r2 * ((1.0 - radius * radius / distance_squared).sqrt() - 1.0);
+
+    let phi = 2.0 * Float::PI() * r1;
+    let x = phi.cos() * (1.0 - z * z).sqrt();
+    let y = phi.sin() * (1.0 - z * z).sqrt();
 
     vec3(x, y, z)
 }

@@ -425,14 +425,12 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
             material: white.clone(),
         }),
         box1,
-        box2,
-        /*
+        // box2,
         Box::new(Sphere {
             center: point3(190.0, 90.0, 190.0),
             radius: 90.0,
             material: grass,
         }),
-        */
     ];
 
     BVHNode::new(world, 0.0, 1.0, rng)
@@ -748,13 +746,10 @@ fn main() {
         }),
     ];
     */
-    let lights = XZRect {
-        x0: 213.0,
-        x1: 343.0,
-        z0: 227.0,
-        z1: 332.0,
-        k: 554.0,
-        material: null_mat.clone(),
+    let lights = Sphere {
+        center: point3(190.0, 90.0, 190.0),
+        radius: 90.0,
+        material: null_mat,
     };
 
     let (world, background, look_from, look_at, vfov, aperture) = match 5 {
