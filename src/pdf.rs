@@ -4,7 +4,7 @@ use crate::{hittable::Hittable, math::random_cosine_direction, onb::Onb, Float, 
 use num_traits::FloatConst;
 
 pub trait Pdf {
-    fn value(&self, direction: Vector3<Float>) -> Float;
+    fn value(&self, direction: Vector3<Float>, rng: &mut MyRng) -> Float;
     fn generate(&self, rng: &mut MyRng) -> Vector3<Float>;
 }
 
@@ -18,7 +18,7 @@ pub struct HittablePdf<T> {
 }
 
 impl Pdf for CosinePdf {
-    fn value(&self, direction: Vector3<Float>) -> Float {
+    fn value(&self, direction: Vector3<Float>, _rng: &mut MyRng) -> Float {
         let cosine = dot(direction.normalize(), self.uvw.w);
         (cosine / Float::PI()).max(0.0)
     }
@@ -29,8 +29,8 @@ impl Pdf for CosinePdf {
 }
 
 impl<T: Hittable> Pdf for HittablePdf<T> {
-    fn value(&self, direction: Vector3<Float>) -> Float {
-        self.hittable.pdf_value(self.o, direction)
+    fn value(&self, direction: Vector3<Float>, rng: &mut MyRng) -> Float {
+        self.hittable.pdf_value(self.o, direction, rng)
     }
 
     fn generate(&self, rng: &mut MyRng) -> Vector3<Float> {

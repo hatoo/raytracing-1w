@@ -30,7 +30,7 @@ use hittable::Hittable;
 use image::load_from_memory;
 use material::Scatter;
 use onb::Onb;
-use pdf::{CosinePdf, Pdf};
+use pdf::{CosinePdf, HittablePdf, Pdf};
 use rand::prelude::*;
 use ray::Ray;
 use rayon::prelude::*;
@@ -49,10 +49,11 @@ use crate::{
     texture::{CheckerTexture, NoiseTexture256, SolidColor},
 };
 
-fn ray_color<H: Hittable + ?Sized>(
+fn ray_color<H: Hittable + ?Sized, L: Hittable>(
     ray: &Ray,
     background: Color,
     world: &H,
+    lights: &L,
     depth: usize,
     rng: &mut MyRng,
 ) -> Color {
@@ -74,17 +75,18 @@ fn ray_color<H: Hittable + ?Sized>(
             pdf,
         }) = hit_record.material.scatter(ray, &hit_record, rng)
         {
-            let cosine_pdf = CosinePdf {
-                uvw: Onb::from_w(hit_record.normal),
+            let light_pdf = HittablePdf {
+                hittable: lights,
+                o: hit_record.position,
             };
 
             let scatterd = Ray {
                 origin: hit_record.position,
-                direction: cosine_pdf.generate(rng),
+                direction: light_pdf.generate(rng),
                 time: hit_record.t,
             };
 
-            let pdf = cosine_pdf.value(scatterd.direction);
+            let pdf = light_pdf.value(scatterd.direction, rng);
 
             Color(
                 emitted.0
@@ -93,7 +95,7 @@ fn ray_color<H: Hittable + ?Sized>(
                             .material
                             .scattering_pdf(ray, &hit_record, &scatterd, rng))
                     .mul_element_wise(
-                        ray_color(&scatterd, background, world, depth - 1, rng).0 / pdf,
+                        ray_color(&scatterd, background, world, lights, depth - 1, rng).0 / pdf,
                     ),
             )
         } else {
@@ -703,6 +705,21 @@ fn main() {
 
     let mut rng = MyRng::from_entropy();
 
+    let light: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
+        emit: SolidColor {
+            color_value: Color(vec3(15.0, 15.0, 15.0)),
+        },
+    }));
+
+    let lights = XZRect {
+        x0: 213.0,
+        x1: 343.0,
+        z0: 227.0,
+        z1: 332.0,
+        k: 554.0,
+        material: light,
+    };
+
     let (world, background, look_from, look_at, vfov, aperture) = match 5 {
         0 => (
             random_scene(&mut rng),
@@ -823,7 +840,8 @@ fn main() {
                         let ray = camera.get_ray(u, v, &mut rng);
                         pixel_color = Color(
                             pixel_color.0
-                                + ray_color(&ray, background, &world, MAX_DEPTH, &mut rng).0,
+                                + ray_color(&ray, background, &world, &lights, MAX_DEPTH, &mut rng)
+                                    .0,
                         );
                     }
 
