@@ -30,7 +30,7 @@ use hittable::Hittable;
 use image::load_from_memory;
 use material::Scatter;
 use onb::Onb;
-use pdf::{CosinePdf, HittablePdf, Pdf};
+use pdf::{CosinePdf, HittablePdf, MixturePdf, Pdf};
 use rand::prelude::*;
 use ray::Ray;
 use rayon::prelude::*;
@@ -75,18 +75,24 @@ fn ray_color<H: Hittable + ?Sized, L: Hittable>(
             pdf,
         }) = hit_record.material.scatter(ray, &hit_record, rng)
         {
-            let light_pdf = HittablePdf {
+            let p0 = HittablePdf {
                 hittable: lights,
                 o: hit_record.position,
             };
 
+            let p1 = CosinePdf {
+                uvw: Onb::from_w(hit_record.normal),
+            };
+
+            let mixed_pdf = MixturePdf { p0, p1 };
+
             let scatterd = Ray {
                 origin: hit_record.position,
-                direction: light_pdf.generate(rng),
+                direction: mixed_pdf.generate(rng),
                 time: hit_record.t,
             };
 
-            let pdf = light_pdf.value(scatterd.direction, rng);
+            let pdf = mixed_pdf.value(scatterd.direction, rng);
 
             Color(
                 emitted.0
@@ -767,7 +773,7 @@ fn main() {
         5 => {
             aspect_ratio = 1.0;
             image_width = 600;
-            samples_per_pixel = 10;
+            samples_per_pixel = 1000;
             (
                 cornel_box(&mut rng),
                 Color(vec3(0.0, 0.0, 0.0)),

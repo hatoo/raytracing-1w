@@ -1,4 +1,5 @@
 use cgmath::{dot, EuclideanSpace, InnerSpace, Point3, Vector3};
+use rand::Rng;
 
 use crate::{hittable::Hittable, math::random_cosine_direction, onb::Onb, Float, MyRng};
 use num_traits::FloatConst;
@@ -15,6 +16,11 @@ pub struct CosinePdf {
 pub struct HittablePdf<T> {
     pub o: Point3<Float>,
     pub hittable: T,
+}
+
+pub struct MixturePdf<P0, P1> {
+    pub p0: P0,
+    pub p1: P1,
 }
 
 impl Pdf for CosinePdf {
@@ -35,5 +41,19 @@ impl<T: Hittable> Pdf for HittablePdf<T> {
 
     fn generate(&self, rng: &mut MyRng) -> Vector3<Float> {
         self.hittable.random(self.o.to_vec(), rng)
+    }
+}
+
+impl<P0: Pdf, P1: Pdf> Pdf for MixturePdf<P0, P1> {
+    fn value(&self, direction: Vector3<Float>, rng: &mut MyRng) -> Float {
+        0.5 * self.p0.value(direction, rng) + 0.5 * self.p1.value(direction, rng)
+    }
+
+    fn generate(&self, rng: &mut MyRng) -> Vector3<Float> {
+        if rng.gen() {
+            self.p0.generate(rng)
+        } else {
+            self.p1.generate(rng)
+        }
     }
 }
