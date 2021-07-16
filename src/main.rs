@@ -729,7 +729,6 @@ fn main() {
 
     let null_mat: Arc<Box<dyn Material>> = Arc::new(Box::new(()));
 
-    /*
     let lights: Vec<Box<dyn Hittable>> = vec![
         Box::new(XZRect {
             x0: 213.0,
@@ -745,12 +744,6 @@ fn main() {
             material: null_mat,
         }),
     ];
-    */
-    let lights = Sphere {
-        center: point3(190.0, 90.0, 190.0),
-        radius: 90.0,
-        material: null_mat,
-    };
 
     let (world, background, look_from, look_at, vfov, aperture) = match 5 {
         0 => (
@@ -799,7 +792,7 @@ fn main() {
         5 => {
             aspect_ratio = 1.0;
             image_width = 600;
-            samples_per_pixel = 10;
+            samples_per_pixel = 1000;
             (
                 cornel_box(&mut rng),
                 Color(vec3(0.0, 0.0, 0.0)),

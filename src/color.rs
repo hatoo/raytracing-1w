@@ -13,7 +13,11 @@ pub struct SampledColor(Vector3<Float>);
 impl Color {
     pub fn into_sampled(self, sample_per_pixel: usize) -> SampledColor {
         let scale = 1.0 / sample_per_pixel as Float;
-        SampledColor(self.0 * scale)
+        let r = if self.0.x.is_nan() { 0.0 } else { self.0.x };
+        let g = if self.0.y.is_nan() { 0.0 } else { self.0.y };
+        let b = if self.0.z.is_nan() { 0.0 } else { self.0.z };
+
+        SampledColor(vec3(r, g, b) * scale)
     }
 }
 

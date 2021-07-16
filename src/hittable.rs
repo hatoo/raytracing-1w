@@ -4,6 +4,7 @@ use crate::aabb::{surrounding_box, AABB};
 use crate::{material::Material, ray::Ray};
 use crate::{Float, MyRng};
 use cgmath::{dot, point3, vec3, Angle, Deg, Point3, Rad, Vector3};
+use rand::prelude::SliceRandom;
 
 #[derive(Clone, Debug)]
 pub struct HitRecord {
@@ -139,6 +140,18 @@ impl<T: Hittable> Hittable for [T] {
         }
         b
     }
+
+    fn pdf_value(&self, o: Point3<Float>, v: Vector3<Float>, rng: &mut MyRng) -> Float {
+        let weight = 1.0 / self.len() as Float;
+
+        self.iter()
+            .map(|hittable| weight * hittable.pdf_value(o, v, rng))
+            .sum()
+    }
+
+    fn random(&self, o: Vector3<Float>, rng: &mut MyRng) -> Vector3<Float> {
+        self.choose(rng).unwrap().random(o, rng)
+    }
 }
 
 impl<T: Hittable> Hittable for Vec<T> {
@@ -173,6 +186,18 @@ impl<T: Hittable> Hittable for Vec<T> {
             }
         }
         b
+    }
+
+    fn pdf_value(&self, o: Point3<Float>, v: Vector3<Float>, rng: &mut MyRng) -> Float {
+        let weight = 1.0 / self.len() as Float;
+
+        self.iter()
+            .map(|hittable| weight * hittable.pdf_value(o, v, rng))
+            .sum()
+    }
+
+    fn random(&self, o: Vector3<Float>, rng: &mut MyRng) -> Vector3<Float> {
+        self.choose(rng).unwrap().random(o, rng)
     }
 }
 
