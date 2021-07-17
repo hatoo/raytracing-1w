@@ -1,15 +1,21 @@
 # raytracing-1w
 
-My code for [Ray Tracing in One Weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html) and [Ray Tracing: The Next Week](https://raytracing.github.io/books/RayTracingTheNextWeek.html).
+My codes for [Ray Tracing in One Weekend Book Series](https://github.com/RayTracing/raytracing.github.io).
 
 # Ray Tracing in One Weekend
 
-On `week-end` brnach.
+On `week-end` branch.
 
 ![One Weekend](one_weekend.png)
 
 # Ray Tracing: The Next Week
 
-On `master` branch.
+On `next-week` branch.
 
 ![Next Week](next_week.png)
+
+# Ray Tracing: The Rest of Your Life
+
+On `master` branch.
+
+![Rest of Your Life](rest_of_your_life.png)

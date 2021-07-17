@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use cgmath::{point3, vec3};
+use cgmath::{dot, point3, vec3, EuclideanSpace, InnerSpace, Point3, Vector3};
+use rand::Rng;
 
 use crate::{
     aabb::AABB,
@@ -41,6 +42,7 @@ pub struct YZRect {
 }
 
 impl Hittable for XYRect {
+    #[allow(clippy::many_single_char_names)]
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, _rng: &mut MyRng) -> Option<HitRecord> {
         let t = (self.k - ray.origin.z) / ray.direction.z;
         if t < t_min || t > t_max {
@@ -78,6 +80,7 @@ impl Hittable for XYRect {
 }
 
 impl Hittable for XZRect {
+    #[allow(clippy::many_single_char_names)]
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, _rng: &mut MyRng) -> Option<HitRecord> {
         let t = (self.k - ray.origin.y) / ray.direction.y;
         if t < t_min || t > t_max {
@@ -112,9 +115,40 @@ impl Hittable for XZRect {
             maximum: point3(self.x1, self.k + 0.0001, self.z1),
         })
     }
+
+    fn pdf_value(&self, origin: Point3<Float>, v: Vector3<Float>, rng: &mut MyRng) -> Float {
+        if let Some(hit_record) = self.hit(
+            &Ray {
+                origin,
+                direction: v,
+                time: 0.0,
+            },
+            0.001,
+            Float::INFINITY,
+            rng,
+        ) {
+            let area = (self.x1 - self.x0) * (self.z1 - self.z0);
+            let distance_squared = hit_record.t * hit_record.t * v.magnitude2();
+            let cosine = (dot(v, hit_record.normal) / v.magnitude()).abs();
+
+            distance_squared / (cosine * area)
+        } else {
+            0.0
+        }
+    }
+
+    fn random(&self, origin: Point3<Float>, rng: &mut MyRng) -> Vector3<Float> {
+        let random_point = vec3(
+            rng.gen_range(self.x0..self.x1),
+            self.k,
+            rng.gen_range(self.z0..self.z1),
+        );
+        random_point - origin.to_vec()
+    }
 }
 
 impl Hittable for YZRect {
+    #[allow(clippy::many_single_char_names)]
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, _rng: &mut MyRng) -> Option<HitRecord> {
         let t = (self.k - ray.origin.x) / ray.direction.x;
         if t < t_min || t > t_max {

@@ -12,6 +12,8 @@ mod hittable;
 mod material;
 mod math;
 mod moving_sphere;
+mod onb;
+mod pdf;
 mod perlin;
 mod ray;
 mod sphere;
@@ -26,7 +28,8 @@ use cgmath::{point3, prelude::*, vec3, Deg};
 use color::Color;
 use hittable::Hittable;
 use image::load_from_memory;
-use material::Scatter;
+use material::{Scatter, ScatterKind};
+use pdf::{HittablePdf, MixturePdf, Pdf};
 use rand::prelude::*;
 use ray::Ray;
 use rayon::prelude::*;
@@ -38,14 +41,81 @@ use crate::{
     camera::Camera,
     color::SampledColor,
     constant_medium::ConstantMedium,
-    hittable::{RotateY, Translate},
+    hittable::{FlipFace, RotateY, Translate},
     material::{Dielectric, DiffuseLight, Lambertian, Material, Metal},
     moving_sphere::MovingSphere,
     sphere::Sphere,
     texture::{CheckerTexture, NoiseTexture256, SolidColor},
 };
 
-fn ray_color<H: Hittable + ?Sized>(
+fn ray_color<H: Hittable + ?Sized, L: Hittable + ?Sized>(
+    ray: &Ray,
+    background: Color,
+    world: &H,
+    lights: &L,
+    depth: usize,
+    rng: &mut MyRng,
+) -> Color {
+    if depth == 0 {
+        return Color(vec3(0.0, 0.0, 0.0));
+    }
+    if let Some(hit_record) = world.hit(ray, 0.001, Float::INFINITY, rng) {
+        let emitted = hit_record.material.emitted(
+            ray,
+            &hit_record,
+            hit_record.u,
+            hit_record.v,
+            hit_record.position,
+        );
+
+        if let Some(Scatter { attenuation, kind }) =
+            hit_record.material.scatter(ray, &hit_record, rng)
+        {
+            match kind {
+                ScatterKind::Pdf(pdf) => {
+                    let p0 = HittablePdf {
+                        hittable: lights,
+                        o: hit_record.position,
+                    };
+
+                    let mixed_pdf = MixturePdf { p0, p1: pdf };
+
+                    let scatterd = Ray {
+                        origin: hit_record.position,
+                        direction: mixed_pdf.generate(rng),
+                        time: hit_record.t,
+                    };
+
+                    let pdf = mixed_pdf.value(scatterd.direction, rng);
+
+                    Color(
+                        emitted.0
+                            + (attenuation.0
+                                * hit_record.material.scattering_pdf(
+                                    ray,
+                                    &hit_record,
+                                    &scatterd,
+                                    rng,
+                                ))
+                            .mul_element_wise(
+                                ray_color(&scatterd, background, world, lights, depth - 1, rng).0
+                                    / pdf,
+                            ),
+                    )
+                }
+                ScatterKind::Spacular(specular_ray) => Color(attenuation.0.mul_element_wise(
+                    ray_color(&specular_ray, background, world, lights, depth - 1, rng).0,
+                )),
+            }
+        } else {
+            emitted
+        }
+    } else {
+        background
+    }
+}
+
+fn ray_color_without_light_objects<H: Hittable + ?Sized>(
     ray: &Ray,
     background: Color,
     world: &H,
@@ -56,24 +126,64 @@ fn ray_color<H: Hittable + ?Sized>(
         return Color(vec3(0.0, 0.0, 0.0));
     }
     if let Some(hit_record) = world.hit(ray, 0.001, Float::INFINITY, rng) {
-        let emitted = hit_record
-            .material
-            .emitted(hit_record.u, hit_record.v, hit_record.position);
+        let emitted = hit_record.material.emitted(
+            ray,
+            &hit_record,
+            hit_record.u,
+            hit_record.v,
+            hit_record.position,
+        );
 
-        return if let Some(Scatter {
-            color,
-            ray: scatterd,
-        }) = hit_record.material.scatter(ray, &hit_record, rng)
+        if let Some(Scatter { attenuation, kind }) =
+            hit_record.material.scatter(ray, &hit_record, rng)
         {
-            Color(
-                emitted.0
-                    + color.0.mul_element_wise(
-                        ray_color(&scatterd, background, world, depth - 1, rng).0,
+            match kind {
+                ScatterKind::Pdf(pdf) => {
+                    let scatterd = Ray {
+                        origin: hit_record.position,
+                        direction: pdf.generate(rng),
+                        time: hit_record.t,
+                    };
+
+                    let pdf_value = pdf.value(scatterd.direction, rng);
+
+                    Color(
+                        emitted.0
+                            + (attenuation.0
+                                * hit_record.material.scattering_pdf(
+                                    ray,
+                                    &hit_record,
+                                    &scatterd,
+                                    rng,
+                                ))
+                            .mul_element_wise(
+                                ray_color_without_light_objects(
+                                    &scatterd,
+                                    background,
+                                    world,
+                                    depth - 1,
+                                    rng,
+                                )
+                                .0 / pdf_value,
+                            ),
+                    )
+                }
+                ScatterKind::Spacular(specular_ray) => Color(
+                    attenuation.0.mul_element_wise(
+                        ray_color_without_light_objects(
+                            &specular_ray,
+                            background,
+                            world,
+                            depth - 1,
+                            rng,
+                        )
+                        .0,
                     ),
-            )
+                ),
+            }
         } else {
             emitted
-        };
+        }
     } else {
         background
     }
@@ -81,14 +191,14 @@ fn ray_color<H: Hittable + ?Sized>(
 
 fn random_scene(rng: &mut impl Rng) -> BVHNode {
     let ground_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(CheckerTexture {
-            even: Box::new(SolidColor {
+        albedo: CheckerTexture {
+            even: SolidColor {
                 color_value: Color(vec3(0.2, 0.3, 0.1)),
-            }),
-            odd: Box::new(SolidColor {
+            },
+            odd: SolidColor {
                 color_value: Color(vec3(0.9, 0.9, 0.9)),
-            }),
-        }),
+            },
+        },
     }));
 
     let mut world: Vec<Box<dyn Hittable>> = vec![Box::new(Sphere {
@@ -106,16 +216,16 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
                 b as Float + 0.9 * rng.gen::<Float>(),
             );
 
-            if InnerSpace::magnitude(center - point3(4.0, 0.2, 0.0)) > 0.9 {
+            if (center - point3(4.0, 0.2, 0.0)).magnitude() > 0.9 {
                 let hittable: Box<dyn Hittable> = match choose_mat {
                     x if x < 0.8 => {
                         let albedo =
                             Color(rng.gen::<Color>().0.mul_element_wise(rng.gen::<Color>().0));
                         let center2 = center + vec3(0.0, rng.gen_range(0.0..0.5), 0.0);
                         let material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-                            albedo: Box::new(SolidColor {
+                            albedo: SolidColor {
                                 color_value: albedo,
-                            }),
+                            },
                         }));
                         Box::new(MovingSphere {
                             center0: center,
@@ -166,9 +276,9 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
         center: point3(-4.0, 1.0, 0.0),
         radius: 1.0,
         material: Arc::new(Box::new(Lambertian {
-            albedo: Box::new(SolidColor {
+            albedo: SolidColor {
                 color_value: Color(vec3(0.4, 0.2, 0.1)),
-            }),
+            },
         })),
     }));
 
@@ -186,14 +296,14 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
 
 fn two_spheres(rng: &mut impl Rng) -> BVHNode {
     let checker_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(CheckerTexture {
-            even: Box::new(SolidColor {
+        albedo: CheckerTexture {
+            even: SolidColor {
                 color_value: Color(vec3(0.2, 0.3, 0.1)),
-            }),
-            odd: Box::new(SolidColor {
+            },
+            odd: SolidColor {
                 color_value: Color(vec3(0.9, 0.9, 0.9)),
-            }),
-        }),
+            },
+        },
     }));
 
     let world: Vec<Box<dyn Hittable>> = vec![
@@ -214,7 +324,7 @@ fn two_spheres(rng: &mut impl Rng) -> BVHNode {
 
 fn two_perlin_spheres(rng: &mut impl Rng) -> BVHNode {
     let pertext: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(NoiseTexture256::new(4.0, rng)),
+        albedo: NoiseTexture256::new(4.0, rng),
     }));
 
     let world: Vec<Box<dyn Hittable>> = vec![
@@ -236,9 +346,7 @@ fn two_perlin_spheres(rng: &mut impl Rng) -> BVHNode {
 fn earth(rng: &mut impl Rng) -> BVHNode {
     const EARTH_JPG: &[u8] = include_bytes!("../assets/earthmap.jpg");
     let image = load_from_memory(EARTH_JPG).unwrap();
-    let earth_surface: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(image),
-    }));
+    let earth_surface: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian { albedo: image }));
 
     let globe = Box::new(Sphere {
         center: point3(0.0, 0.0, 0.0),
@@ -251,13 +359,13 @@ fn earth(rng: &mut impl Rng) -> BVHNode {
 
 fn simple_light(rng: &mut impl Rng) -> BVHNode {
     let pertext: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(NoiseTexture256::new(4.0, rng)),
+        albedo: NoiseTexture256::new(4.0, rng),
     }));
 
     let difflight: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
-        emit: Box::new(SolidColor {
+        emit: SolidColor {
             color_value: Color(vec3(4.0, 4.0, 4.0)),
-        }),
+        },
     }));
 
     let world: Vec<Box<dyn Hittable>> = vec![
@@ -286,52 +394,61 @@ fn simple_light(rng: &mut impl Rng) -> BVHNode {
 
 fn cornel_box(rng: &mut impl Rng) -> BVHNode {
     let red: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.65, 0.05, 0.05)),
-        }),
+        },
     }));
 
     let white: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.73, 0.73, 0.73)),
-        }),
+        },
     }));
 
     let green: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.12, 0.45, 0.15)),
-        }),
+        },
     }));
 
     let light: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
-        emit: Box::new(SolidColor {
+        emit: SolidColor {
             color_value: Color(vec3(15.0, 15.0, 15.0)),
-        }),
+        },
     }));
 
-    let box1 = Box::new(AABox::new(
+    let aluminum: Arc<Box<dyn Material>> = Arc::new(Box::new(Metal {
+        fuzz: 0.0,
+        albedo: Color(vec3(0.8, 0.85, 0.88)),
+    }));
+
+    let box1 = AABox::new(
         point3(0.0, 0.0, 0.0),
         point3(165.0, 330.0, 165.0),
-        white.clone(),
+        aluminum,
         rng,
-    ));
-    let box1 = Box::new(RotateY::new(box1, 0.0, 1.0, Deg(15.0)));
+    );
+    let box1 = RotateY::new(box1, 0.0, 1.0, Deg(15.0));
     let box1 = Box::new(Translate {
         hittable: box1,
         offset: vec3(265.0, 0.0, 295.0),
     });
 
-    let box2 = Box::new(AABox::new(
+    /*
+    let box2 = AABox::new(
         point3(0.0, 0.0, 0.0),
         point3(165.0, 165.0, 165.0),
         white.clone(),
         rng,
-    ));
-    let box2 = Box::new(RotateY::new(box2, 0.0, 1.0, Deg(-18.0)));
+    );
+    let box2 = RotateY::new(box2, 0.0, 1.0, Deg(-18.0));
     let box2 = Box::new(Translate {
         hittable: box2,
         offset: vec3(130.0, 0.0, 65.0),
     });
+    */
+
+    let grass: Arc<Box<dyn Material>> = Arc::new(Box::new(Dielectric { ir: 1.5 }));
 
     let world: Vec<Box<dyn Hittable>> = vec![
         Box::new(YZRect {
@@ -350,14 +467,14 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
             k: 0.0,
             material: red,
         }),
-        Box::new(XZRect {
+        Box::new(FlipFace(XZRect {
             x0: 213.0,
             x1: 343.0,
             z0: 227.0,
             z1: 332.0,
             k: 554.0,
             material: light,
-        }),
+        })),
         Box::new(XZRect {
             x0: 0.0,
             x1: 555.0,
@@ -383,7 +500,12 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
             material: white.clone(),
         }),
         box1,
-        box2,
+        // box2,
+        Box::new(Sphere {
+            center: point3(190.0, 90.0, 190.0),
+            radius: 90.0,
+            material: grass,
+        }),
     ];
 
     BVHNode::new(world, 0.0, 1.0, rng)
@@ -391,52 +513,52 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
 
 fn cornel_smoke(rng: &mut impl Rng) -> BVHNode {
     let red: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.65, 0.05, 0.05)),
-        }),
+        },
     }));
 
     let white: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.73, 0.73, 0.73)),
-        }),
+        },
     }));
 
     let green: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.12, 0.45, 0.15)),
-        }),
+        },
     }));
 
     let light: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
-        emit: Box::new(SolidColor {
-            color_value: Color(vec3(15.0, 15.0, 15.0)),
-        }),
+        emit: SolidColor {
+            color_value: Color(vec3(7.0, 7.0, 7.0)),
+        },
     }));
 
-    let box1 = Box::new(AABox::new(
+    let box1 = AABox::new(
         point3(0.0, 0.0, 0.0),
         point3(165.0, 330.0, 165.0),
         white.clone(),
         rng,
-    ));
-    let box1 = Box::new(RotateY::new(box1, 0.0, 1.0, Deg(15.0)));
-    let box1 = Box::new(Translate {
+    );
+    let box1 = RotateY::new(box1, 0.0, 1.0, Deg(15.0));
+    let box1 = Translate {
         hittable: box1,
         offset: vec3(265.0, 0.0, 295.0),
-    });
+    };
 
-    let box2 = Box::new(AABox::new(
+    let box2 = AABox::new(
         point3(0.0, 0.0, 0.0),
         point3(165.0, 165.0, 165.0),
         white.clone(),
         rng,
-    ));
-    let box2 = Box::new(RotateY::new(box2, 0.0, 1.0, Deg(-18.0)));
-    let box2 = Box::new(Translate {
+    );
+    let box2 = RotateY::new(box2, 0.0, 1.0, Deg(-18.0));
+    let box2 = Translate {
         hittable: box2,
         offset: vec3(130.0, 0.0, 65.0),
-    });
+    };
 
     let smoke1 = Box::new(ConstantMedium::new(
         box1,
@@ -471,14 +593,14 @@ fn cornel_smoke(rng: &mut impl Rng) -> BVHNode {
             k: 0.0,
             material: red,
         }),
-        Box::new(XZRect {
-            x0: 213.0,
-            x1: 343.0,
-            z0: 227.0,
-            z1: 332.0,
+        Box::new(FlipFace(XZRect {
+            x0: 113.0,
+            x1: 443.0,
+            z0: 127.0,
+            z1: 432.0,
             k: 554.0,
             material: light,
-        }),
+        })),
         Box::new(XZRect {
             x0: 0.0,
             x1: 555.0,
@@ -512,9 +634,9 @@ fn cornel_smoke(rng: &mut impl Rng) -> BVHNode {
 
 fn final_scene(rng: &mut impl Rng) -> BVHNode {
     let ground: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.48, 0.83, 0.53)),
-        }),
+        },
     }));
 
     const BOXES_PER_SIDE: usize = 20;
@@ -543,27 +665,27 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
     let mut objects: Vec<Box<dyn Hittable>> = vec![Box::new(BVHNode::new(boxes1, 0.0, 1.0, rng))];
 
     let light: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
-        emit: Box::new(SolidColor {
+        emit: SolidColor {
             color_value: Color(vec3(7.0, 7.0, 7.0)),
-        }),
+        },
     }));
 
-    objects.push(Box::new(XZRect {
+    objects.push(Box::new(FlipFace(XZRect {
         x0: 123.0,
         x1: 423.0,
         z0: 147.0,
         z1: 412.0,
         k: 554.0,
         material: light,
-    }));
+    })));
 
     let center1 = point3(400.0, 400.0, 200.0);
     let center2 = center1 + vec3(30.0, 0.0, 0.0);
 
     let moving_sphere_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.7, 0.3, 0.1)),
-        }),
+        },
     }));
 
     objects.push(Box::new(MovingSphere {
@@ -590,11 +712,11 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
         })),
     }));
 
-    let boundary = Box::new(Sphere {
+    let boundary = Sphere {
         center: point3(360.0, 150.0, 145.0),
         radius: 70.0,
         material: Arc::new(Box::new(Dielectric { ir: 1.5 })),
-    });
+    };
 
     objects.push(Box::new(Sphere {
         center: point3(360.0, 150.0, 145.0),
@@ -609,11 +731,11 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
         }),
     )));
 
-    let boundary = Box::new(Sphere {
+    let boundary = Sphere {
         center: point3(0.0, 0.0, 0.0),
         radius: 5000.0,
         material: Arc::new(Box::new(Dielectric { ir: 1.5 })),
-    });
+    };
     objects.push(Box::new(ConstantMedium::new(
         boundary,
         0.0001,
@@ -623,7 +745,7 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
     )));
 
     let emat: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(load_from_memory(include_bytes!("../assets/earthmap.jpg")).unwrap()),
+        albedo: load_from_memory(include_bytes!("../assets/earthmap.jpg")).unwrap(),
     }));
 
     objects.push(Box::new(Sphere {
@@ -633,7 +755,7 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
     }));
 
     let pertext: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(NoiseTexture256::new(0.1, rng)),
+        albedo: NoiseTexture256::new(0.1, rng),
     }));
     objects.push(Box::new(Sphere {
         center: point3(220.0, 280.0, 300.0),
@@ -643,9 +765,9 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
 
     let mut boxes2: Vec<Box<dyn Hittable>> = Vec::new();
     let white: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-        albedo: Box::new(SolidColor {
+        albedo: SolidColor {
             color_value: Color(vec3(0.73, 0.73, 0.73)),
-        }),
+        },
     }));
 
     let ns = 1000;
@@ -661,13 +783,9 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
         }))
     }
 
-    let boxes2 = Box::new(RotateY::new(
-        Box::new(BVHNode::new(boxes2, 0.0, 1.0, rng)),
-        0.0,
-        1.0,
-        Deg(15.0),
-    ));
-    let boxes2 = Box::new(Translate {
+    let boxes2 = RotateY::new(BVHNode::new(boxes2, 0.0, 1.0, rng), 0.0, 1.0, Deg(15.0));
+
+    let boxes2: Box<dyn Hittable> = Box::new(Translate {
         hittable: boxes2,
         offset: vec3(-100.0, 270.0, 395.0),
     });
@@ -684,17 +802,32 @@ fn main() {
 
     let mut rng = MyRng::from_entropy();
 
-    let (world, background, look_from, look_at, vfov, aperture) = match 7 {
-        0 => (
-            random_scene(&mut rng),
-            Color(vec3(0.70, 0.80, 1.00)),
-            point3(13.0, 2.0, 3.0),
-            point3(0.0, 0.0, 0.0),
-            Deg(20.0),
-            0.1,
-        ),
+    let null_mat: Arc<Box<dyn Material>> = Arc::new(Box::new(()));
+
+    let (world, lights, background, look_from, look_at, vfov, aperture): (
+        _,
+        Option<Vec<Box<dyn Hittable>>>,
+        _,
+        _,
+        _,
+        _,
+        _,
+    ) = match 5 {
+        0 => {
+            samples_per_pixel = 500;
+            (
+                random_scene(&mut rng),
+                None,
+                Color(vec3(0.70, 0.80, 1.00)),
+                point3(13.0, 2.0, 3.0),
+                point3(0.0, 0.0, 0.0),
+                Deg(20.0),
+                0.1,
+            )
+        }
         1 => (
             two_spheres(&mut rng),
+            None,
             Color(vec3(0.70, 0.80, 1.00)),
             point3(13.0, 2.0, 3.0),
             point3(0.0, 0.0, 0.0),
@@ -703,6 +836,7 @@ fn main() {
         ),
         2 => (
             two_perlin_spheres(&mut rng),
+            None,
             Color(vec3(0.70, 0.80, 1.00)),
             point3(13.0, 2.0, 3.0),
             point3(0.0, 0.0, 0.0),
@@ -711,6 +845,7 @@ fn main() {
         ),
         3 => (
             earth(&mut rng),
+            None,
             Color(vec3(0.70, 0.80, 1.00)),
             point3(13.0, 2.0, 3.0),
             point3(0.0, 0.0, 0.0),
@@ -721,6 +856,7 @@ fn main() {
             samples_per_pixel = 400;
             (
                 simple_light(&mut rng),
+                None,
                 Color(vec3(0.0, 0.0, 0.0)),
                 point3(26.0, 3.0, 6.0),
                 point3(0.0, 2.0, 0.0),
@@ -731,9 +867,24 @@ fn main() {
         5 => {
             aspect_ratio = 1.0;
             image_width = 600;
-            samples_per_pixel = 200;
+            samples_per_pixel = 100;
             (
                 cornel_box(&mut rng),
+                Some(vec![
+                    Box::new(XZRect {
+                        x0: 213.0,
+                        x1: 343.0,
+                        z0: 227.0,
+                        z1: 332.0,
+                        k: 554.0,
+                        material: null_mat.clone(),
+                    }),
+                    Box::new(Sphere {
+                        center: point3(190.0, 90.0, 190.0),
+                        radius: 90.0,
+                        material: null_mat.clone(),
+                    }),
+                ]),
                 Color(vec3(0.0, 0.0, 0.0)),
                 point3(278.0, 278.0, -800.0),
                 point3(278.0, 278.0, 0.0),
@@ -747,6 +898,14 @@ fn main() {
             samples_per_pixel = 200;
             (
                 cornel_smoke(&mut rng),
+                Some(vec![Box::new(XZRect {
+                    x0: 113.0,
+                    x1: 443.0,
+                    z0: 127.0,
+                    z1: 432.0,
+                    k: 554.0,
+                    material: null_mat,
+                })]),
                 Color(vec3(0.0, 0.0, 0.0)),
                 point3(278.0, 278.0, -800.0),
                 point3(278.0, 278.0, 0.0),
@@ -760,6 +919,14 @@ fn main() {
             samples_per_pixel = 10000;
             (
                 final_scene(&mut rng),
+                Some(vec![Box::new(XZRect {
+                    x0: 123.0,
+                    x1: 423.0,
+                    z0: 147.0,
+                    z1: 412.0,
+                    k: 554.0,
+                    material: null_mat,
+                })]),
                 Color(vec3(0.0, 0.0, 0.0)),
                 point3(478.0, 278.0, -600.0),
                 point3(278.0, 278.0, 0.0),
@@ -804,7 +971,21 @@ fn main() {
                         let ray = camera.get_ray(u, v, &mut rng);
                         pixel_color = Color(
                             pixel_color.0
-                                + ray_color(&ray, background, &world, MAX_DEPTH, &mut rng).0,
+                                + if let Some(lights) = lights.as_ref() {
+                                    ray_color(
+                                        &ray,
+                                        background,
+                                        &world,
+                                        lights.as_slice(),
+                                        MAX_DEPTH,
+                                        &mut rng,
+                                    )
+                                } else {
+                                    ray_color_without_light_objects(
+                                        &ray, background, &world, MAX_DEPTH, &mut rng,
+                                    )
+                                }
+                                .0,
                         );
                     }
 

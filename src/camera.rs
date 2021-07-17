@@ -1,7 +1,7 @@
 use cgmath::{Angle, Deg, EuclideanSpace, InnerSpace, Point3, Rad, Vector3};
 use rand::Rng;
 
-use crate::{math::random_vec3_in_unit_disk, ray::Ray, Float};
+use crate::{math::random_in_unit_disk, ray::Ray, Float};
 
 #[derive(Clone, Debug)]
 pub struct Camera {
@@ -18,6 +18,7 @@ pub struct Camera {
 }
 
 impl Camera {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         look_from: Point3<Float>,
         look_at: Point3<Float>,
@@ -34,8 +35,8 @@ impl Camera {
         let viewport_height = 2.0 * h;
         let viewport_width = aspect_ratio * viewport_height;
 
-        let w = InnerSpace::normalize(look_from - look_at);
-        let u = InnerSpace::normalize(vup.cross(w));
+        let w = (look_from - look_at).normalize();
+        let u = vup.cross(w).normalize();
         let v = w.cross(u);
 
         let origin = look_from;
@@ -58,16 +59,15 @@ impl Camera {
     }
 
     pub fn get_ray(&self, s: Float, t: Float, rng: &mut impl Rng) -> Ray {
-        let rd = self.lens_radius * random_vec3_in_unit_disk(rng);
+        let rd = self.lens_radius * random_in_unit_disk(rng);
         let offset = self.u * rd.x + self.v * rd.y;
 
         Ray {
             origin: self.origin + offset,
-            direction: EuclideanSpace::to_vec(
-                self.lower_left_corner + s * self.horizontal + t * self.vertical
-                    - EuclideanSpace::to_vec(self.origin)
-                    - offset,
-            ),
+            direction: (self.lower_left_corner + s * self.horizontal + t * self.vertical
+                - self.origin.to_vec()
+                - offset)
+                .to_vec(),
             time: rng.gen_range(self.time0..self.time1),
         }
     }

@@ -15,9 +15,9 @@ pub struct SolidColor {
 }
 
 #[derive(Debug)]
-pub struct CheckerTexture {
-    pub odd: Box<dyn Texture>,
-    pub even: Box<dyn Texture>,
+pub struct CheckerTexture<A, B> {
+    pub odd: A,
+    pub even: B,
 }
 
 #[derive(Debug)]
@@ -43,7 +43,7 @@ impl Texture for SolidColor {
     }
 }
 
-impl Texture for CheckerTexture {
+impl<A: Texture, B: Texture> Texture for CheckerTexture<A, B> {
     fn value(&self, u: Float, v: Float, point: Point3<Float>) -> Color {
         let sines = (10.0 * point.x).sin() * (10.0 * point.y).sin() * (10.0 * point.z).sin();
         if sines < 0.0 {

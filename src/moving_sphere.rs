@@ -27,6 +27,7 @@ impl MovingSphere {
 }
 
 impl Hittable for MovingSphere {
+    #[allow(clippy::suspicious_operation_groupings)]
     fn hit(
         &self,
         ray: &crate::ray::Ray,
@@ -35,9 +36,9 @@ impl Hittable for MovingSphere {
         _rng: &mut MyRng,
     ) -> Option<HitRecord> {
         let oc = ray.origin - self.center(ray.time);
-        let a = InnerSpace::magnitude2(ray.direction);
+        let a = ray.direction.magnitude2();
         let half_b = dot(oc, ray.direction);
-        let c = InnerSpace::magnitude2(oc) - self.radius * self.radius;
+        let c = oc.magnitude2() - self.radius * self.radius;
 
         let discriminant = half_b * half_b - a * c;
         if discriminant < 0.0 {

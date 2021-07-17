@@ -3,7 +3,7 @@ use cgmath::{dot, vec3, InnerSpace, Point3, Vector3};
 use num_traits::float::FloatConst;
 use rand::prelude::*;
 
-pub fn random_vec3_in_unit_sphere(rng: &mut impl Rng) -> Vector3<Float> {
+pub fn random_in_unit_sphere(rng: &mut impl Rng) -> Vector3<Float> {
     loop {
         let v = vec3(
             rng.gen_range(-1.0..1.0),
@@ -11,15 +11,15 @@ pub fn random_vec3_in_unit_sphere(rng: &mut impl Rng) -> Vector3<Float> {
             rng.gen_range(-1.0..1.0),
         );
 
-        if InnerSpace::magnitude2(v) < 1.0 {
+        if v.magnitude2() < 1.0 {
             break v;
         }
     }
 }
 
 #[allow(dead_code)]
-pub fn random_vec3_in_hemisphere(normal: Vector3<Float>, rng: &mut impl Rng) -> Vector3<Float> {
-    let v = InnerSpace::normalize(random_vec3_in_unit_sphere(rng));
+pub fn random_in_hemisphere(normal: Vector3<Float>, rng: &mut impl Rng) -> Vector3<Float> {
+    let v = random_in_unit_sphere(rng).normalize();
     if dot(normal, v) > 0.0 {
         v
     } else {
@@ -27,13 +27,41 @@ pub fn random_vec3_in_hemisphere(normal: Vector3<Float>, rng: &mut impl Rng) -> 
     }
 }
 
-pub fn random_vec3_in_unit_disk(rng: &mut impl Rng) -> Vector3<Float> {
+pub fn random_in_unit_disk(rng: &mut impl Rng) -> Vector3<Float> {
     loop {
         let p = vec3(rng.gen_range(-1.0..1.0), rng.gen_range(-1.0..1.0), 0.0);
-        if InnerSpace::magnitude2(p) < 1.0 {
+        if p.magnitude2() < 1.0 {
             break p;
         }
     }
+}
+
+pub fn random_cosine_direction(rng: &mut impl Rng) -> Vector3<Float> {
+    let r1: Float = rng.gen();
+    let r2: Float = rng.gen();
+    let z = (1.0 - r2).sqrt();
+
+    let phi = 2.0 * Float::PI() * r1;
+    let x = phi.cos() * r2.sqrt();
+    let y = phi.sin() * r2.sqrt();
+
+    vec3(x, y, z)
+}
+
+pub fn random_to_sphere(
+    radius: Float,
+    distance_squared: Float,
+    rng: &mut impl Rng,
+) -> Vector3<Float> {
+    let r1 = rng.gen::<Float>();
+    let r2 = rng.gen::<Float>();
+    let z = 1.0 + r2 * ((1.0 - radius * radius / distance_squared).sqrt() - 1.0);
+
+    let phi = 2.0 * Float::PI() * r1;
+    let x = phi.cos() * (1.0 - z * z).sqrt();
+    let y = phi.sin() * (1.0 - z * z).sqrt();
+
+    vec3(x, y, z)
 }
 
 pub fn sphere_uv(point: Point3<Float>) -> (Float, Float) {

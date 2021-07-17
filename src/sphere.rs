@@ -1,12 +1,15 @@
 use std::sync::Arc;
 
-use cgmath::{dot, prelude::*, vec3, Point3};
+use cgmath::{dot, prelude::*, vec3, Point3, Vector3};
+use num_traits::FloatConst;
 
 use crate::{
     aabb::AABB,
     hittable::{HitRecord, Hittable},
     material::Material,
-    math::sphere_uv,
+    math::{random_to_sphere, sphere_uv},
+    onb::Onb,
+    ray::Ray,
     Float, MyRng,
 };
 
@@ -17,6 +20,7 @@ pub struct Sphere {
 }
 
 impl Hittable for Sphere {
+    #[allow(clippy::suspicious_operation_groupings)]
     fn hit(
         &self,
         ray: &crate::ray::Ray,
@@ -25,9 +29,9 @@ impl Hittable for Sphere {
         _rng: &mut MyRng,
     ) -> Option<HitRecord> {
         let oc = ray.origin - self.center;
-        let a = InnerSpace::magnitude2(ray.direction);
+        let a = ray.direction.magnitude2();
         let half_b = dot(oc, ray.direction);
-        let c = InnerSpace::magnitude2(oc) - self.radius * self.radius;
+        let c = oc.magnitude2() - self.radius * self.radius;
 
         let discriminant = half_b * half_b - a * c;
         if discriminant < 0.0 {
@@ -63,5 +67,34 @@ impl Hittable for Sphere {
             minimum: self.center - vec3(self.radius, self.radius, self.radius),
             maximum: self.center + vec3(self.radius, self.radius, self.radius),
         })
+    }
+
+    fn pdf_value(&self, o: Point3<Float>, v: Vector3<Float>, rng: &mut MyRng) -> Float {
+        self.hit(
+            &Ray {
+                origin: o,
+                direction: v,
+                time: 0.0,
+            },
+            0.001,
+            Float::INFINITY,
+            rng,
+        )
+        .map(|_| {
+            let cos_theta_max =
+                (1.0 - self.radius * self.radius / (self.center - o).magnitude2()).sqrt();
+            let solid_angle = 2.0 * Float::PI() * (1.0 - cos_theta_max);
+            1.0 / solid_angle
+        })
+        .unwrap_or(0.0)
+    }
+
+    fn random(&self, o: Point3<Float>, rng: &mut MyRng) -> Vector3<Float> {
+        let direction = self.center - o;
+        let distance_squared = direction.magnitude2();
+
+        let uvw = Onb::from_w(direction);
+
+        uvw.local(random_to_sphere(self.radius, distance_squared, rng))
     }
 }

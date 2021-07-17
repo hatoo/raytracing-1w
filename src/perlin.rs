@@ -26,11 +26,12 @@ impl<const POINT_COUNT: usize> Perlin<POINT_COUNT> {
         let mut ranvec = [vec3(0.0, 0.0, 0.0); POINT_COUNT];
 
         for v in ranvec.iter_mut() {
-            *v = InnerSpace::normalize(vec3(
+            *v = vec3(
                 rng.gen_range(-1.0..1.0),
                 rng.gen_range(-1.0..1.0),
                 rng.gen_range(-1.0..1.0),
-            ));
+            )
+            .normalize();
         }
 
         Self {
@@ -41,6 +42,7 @@ impl<const POINT_COUNT: usize> Perlin<POINT_COUNT> {
         }
     }
 
+    #[allow(clippy::many_single_char_names)]
     pub fn noise(&self, p: Point3<Float>) -> Float {
         let u = p.x - p.x.floor();
         let v = p.y - p.y.floor();
@@ -89,14 +91,14 @@ impl<const POINT_COUNT: usize> Perlin<POINT_COUNT> {
         let ww = w * w * (3.0 - 2.0 * w);
 
         let mut accum = 0.0;
-        for i in 0..2 {
-            for j in 0..2 {
-                for k in 0..2 {
+        for (i, c) in c.iter().enumerate() {
+            for (j, c) in c.iter().enumerate() {
+                for (k, c) in c.iter().enumerate() {
                     let weight_v = vec3(u - i as Float, v - j as Float, w - k as Float);
                     accum += (i as Float * uu + (1 - i) as Float * (1.0 - uu))
                         * (j as Float * vv + (1 - j) as Float * (1.0 - vv))
                         * (k as Float * ww + (1 - k) as Float * (1.0 - ww))
-                        * dot(c[i][j][k], weight_v);
+                        * dot(*c, weight_v);
                 }
             }
         }
@@ -106,6 +108,6 @@ impl<const POINT_COUNT: usize> Perlin<POINT_COUNT> {
 
 impl<const POINT_COUNT: usize> Texture for Perlin<POINT_COUNT> {
     fn value(&self, _u: Float, _v: Float, point: Point3<Float>) -> Color {
-        return Color(self.noise(point) * vec3(1.0, 1.0, 1.0));
+        Color(self.noise(point) * vec3(1.0, 1.0, 1.0))
     }
 }
