@@ -855,14 +855,17 @@ fn main() {
                 0.0,
             )
         }
-        3 => (
-            earth(&mut rng),
-            Color(vec3(0.70, 0.80, 1.00)),
-            point3(13.0, 2.0, 3.0),
-            point3(0.0, 0.0, 0.0),
-            Deg(20.0),
-            0.0,
-        ),
+        3 => {
+            lights = None;
+            (
+                earth(&mut rng),
+                Color(vec3(0.70, 0.80, 1.00)),
+                point3(13.0, 2.0, 3.0),
+                point3(0.0, 0.0, 0.0),
+                Deg(20.0),
+                0.0,
+            )
+        }
         4 => {
             samples_per_pixel = 400;
             (
