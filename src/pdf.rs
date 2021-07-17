@@ -23,7 +23,7 @@ pub struct MixturePdf<P0, P1> {
     pub p1: P1,
 }
 
-impl Pdf for Box<dyn Pdf> {
+impl<T: Pdf + ?Sized> Pdf for Box<T> {
     fn value(&self, direction: Vector3<Float>, rng: &mut MyRng) -> Float {
         self.as_ref().value(direction, rng)
     }
