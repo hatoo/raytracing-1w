@@ -12,14 +12,14 @@ use crate::{
     Float, MyRng,
 };
 
-pub struct ConstantMedium {
-    boundary: Box<dyn Hittable>,
+pub struct ConstantMedium<T> {
+    boundary: T,
     phase_function: Arc<Box<dyn Material>>,
     neg_inv_density: Float,
 }
 
-impl ConstantMedium {
-    pub fn new(boundary: Box<dyn Hittable>, d: Float, texture: Box<dyn Texture>) -> Self {
+impl<T> ConstantMedium<T> {
+    pub fn new(boundary: T, d: Float, texture: Box<dyn Texture>) -> Self {
         Self {
             boundary,
             phase_function: Arc::new(Box::new(Isotropic { albedo: texture })),
@@ -54,7 +54,7 @@ impl Material for Isotropic {
     }
 }
 
-impl Hittable for ConstantMedium {
+impl<T: Hittable> Hittable for ConstantMedium<T> {
     fn bounding_box(&self, time0: Float, time1: Float) -> Option<crate::aabb::AABB> {
         self.boundary.bounding_box(time0, time1)
     }

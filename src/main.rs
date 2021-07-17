@@ -467,10 +467,10 @@ fn cornel_smoke(rng: &mut impl Rng) -> BVHNode {
         rng,
     );
     let box1 = RotateY::new(box1, 0.0, 1.0, Deg(15.0));
-    let box1 = Box::new(Translate {
+    let box1 = Translate {
         hittable: box1,
         offset: vec3(265.0, 0.0, 295.0),
-    });
+    };
 
     let box2 = AABox::new(
         point3(0.0, 0.0, 0.0),
@@ -479,10 +479,10 @@ fn cornel_smoke(rng: &mut impl Rng) -> BVHNode {
         rng,
     );
     let box2 = RotateY::new(box2, 0.0, 1.0, Deg(-18.0));
-    let box2 = Box::new(Translate {
+    let box2 = Translate {
         hittable: box2,
         offset: vec3(130.0, 0.0, 65.0),
-    });
+    };
 
     let smoke1 = Box::new(ConstantMedium::new(
         box1,
@@ -636,11 +636,11 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
         })),
     }));
 
-    let boundary = Box::new(Sphere {
+    let boundary = Sphere {
         center: point3(360.0, 150.0, 145.0),
         radius: 70.0,
         material: Arc::new(Box::new(Dielectric { ir: 1.5 })),
-    });
+    };
 
     objects.push(Box::new(Sphere {
         center: point3(360.0, 150.0, 145.0),
@@ -655,11 +655,11 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
         }),
     )));
 
-    let boundary = Box::new(Sphere {
+    let boundary = Sphere {
         center: point3(0.0, 0.0, 0.0),
         radius: 5000.0,
         material: Arc::new(Box::new(Dielectric { ir: 1.5 })),
-    });
+    };
     objects.push(Box::new(ConstantMedium::new(
         boundary,
         0.0001,
