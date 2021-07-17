@@ -58,7 +58,7 @@ impl BVHNode {
         rng: &mut impl Rng,
     ) -> Self {
         match objects.len() {
-            0 => unreachable!(),
+            0 => panic!("objects mut not be empty"),
             1 => {
                 let obj = objects.pop().unwrap();
                 Self {
