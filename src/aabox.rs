@@ -12,13 +12,13 @@ use crate::{
     Float,
 };
 
-pub struct AABox<R: Rng> {
+pub struct AABox<R> {
     box_min: Point3<Float>,
     box_max: Point3<Float>,
     sides: BVHNode<R>,
 }
 
-impl<R: Rng + Send + Sync + 'static> AABox<R> {
+impl<R: 'static + Rng + Send + Sync> AABox<R> {
     pub fn new(
         p0: Point3<Float>,
         p1: Point3<Float>,

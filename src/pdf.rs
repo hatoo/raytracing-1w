@@ -29,7 +29,7 @@ pub struct MixturePdf<P0, P1, R> {
     pub _phantom: PhantomData<R>,
 }
 
-impl<R: 'static + Rng + Send + Sync, T: Pdf<R = R> + ?Sized> Pdf for Box<T> {
+impl<R: Rng, T: Pdf<R = R> + ?Sized> Pdf for Box<T> {
     type R = R;
 
     fn value(&self, direction: Vector3<Float>, rng: &mut R) -> Float {
@@ -41,7 +41,7 @@ impl<R: 'static + Rng + Send + Sync, T: Pdf<R = R> + ?Sized> Pdf for Box<T> {
     }
 }
 
-impl<R: 'static + Rng + Send + Sync> Pdf for CosinePdf<R> {
+impl<R: Rng> Pdf for CosinePdf<R> {
     type R = R;
 
     fn value(&self, direction: Vector3<Float>, _rng: &mut R) -> Float {

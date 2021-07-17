@@ -12,7 +12,7 @@ use crate::{
     Float,
 };
 
-pub struct ConstantMedium<T, R: 'static + Rng + Send + Sync> {
+pub struct ConstantMedium<T, R> {
     boundary: T,
     phase_function: Arc<Box<dyn Material<R = R>>>,
     neg_inv_density: Float,
@@ -37,7 +37,7 @@ struct Isotropic<R> {
     _phantom: PhantomData<R>,
 }
 
-impl<R: 'static + Rng + Send + Sync> Material for Isotropic<R> {
+impl<R: Rng + Send + Sync> Material for Isotropic<R> {
     type R = R;
 
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord<R>, rng: &mut R) -> Option<Scatter<R>> {
@@ -56,7 +56,7 @@ impl<R: 'static + Rng + Send + Sync> Material for Isotropic<R> {
     }
 }
 
-impl<R: 'static + Rng + Send + Sync, T: Hittable<R = R>> Hittable for ConstantMedium<T, R> {
+impl<R: Rng + Send + Sync, T: Hittable<R = R>> Hittable for ConstantMedium<T, R> {
     type R = R;
 
     fn bounding_box(&self, time0: Float, time1: Float) -> Option<crate::aabb::AABB> {

@@ -12,18 +12,18 @@ use rand::Rng;
 
 use crate::{color::Color, hittable::HitRecord, math::random_in_unit_sphere, ray::Ray};
 
-pub enum ScatterKind<R: Rng> {
+pub enum ScatterKind<R> {
     Spacular(Ray),
     Pdf(Box<dyn Pdf<R = R>>),
 }
 
-pub struct Scatter<R: Rng> {
+pub struct Scatter<R> {
     pub kind: ScatterKind<R>,
     pub attenuation: Color,
 }
 
 pub trait Material: Send + Sync {
-    type R: 'static + Rng + Send + Sync;
+    type R: Rng;
 
     fn scatter(
         &self,
@@ -75,7 +75,7 @@ pub struct DiffuseLight<T, R> {
     pub _phantom: PhantomData<R>,
 }
 
-impl<R: 'static + Rng + Send + Sync> Material for PhantomData<R> {
+impl<R: Rng + Send + Sync> Material for PhantomData<R> {
     type R = R;
 }
 
@@ -110,7 +110,7 @@ fn reflect(v: Vector3<Float>, n: Vector3<Float>) -> Vector3<Float> {
     v - 2.0 * dot(v, n) * n
 }
 
-impl<R: 'static + Rng + Send + Sync> Material for Metal<R> {
+impl<R: Rng + Send + Sync> Material for Metal<R> {
     type R = R;
 
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord<R>, rng: &mut R) -> Option<Scatter<R>> {
@@ -146,7 +146,7 @@ pub struct Dielectric<R> {
     pub _phantom: PhantomData<R>,
 }
 
-impl<R: 'static + Rng + Send + Sync> Material for Dielectric<R> {
+impl<R: Rng + Send + Sync> Material for Dielectric<R> {
     type R = R;
 
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord<R>, rng: &mut R) -> Option<Scatter<R>> {
@@ -179,7 +179,7 @@ impl<R: 'static + Rng + Send + Sync> Material for Dielectric<R> {
     }
 }
 
-impl<T: Texture, R: 'static + Rng + Send + Sync> Material for DiffuseLight<T, R> {
+impl<T: Texture, R: Rng + Send + Sync> Material for DiffuseLight<T, R> {
     type R = R;
 
     fn scatter(&self, _ray: &Ray, _hit_record: &HitRecord<R>, _rng: &mut R) -> Option<Scatter<R>> {

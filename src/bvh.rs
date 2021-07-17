@@ -7,17 +7,17 @@ use crate::{
     Float,
 };
 
-enum BVHChild<R: Rng> {
+enum BVHChild<R> {
     One(Box<dyn Hittable<R = R>>),
     Two(Box<dyn Hittable<R = R>>, Box<dyn Hittable<R = R>>),
 }
 
-pub struct BVHNode<R: Rng> {
+pub struct BVHNode<R> {
     child: BVHChild<R>,
     aabb: AABB,
 }
 
-impl<R: 'static + Rng + Send + Sync> Hittable for BVHNode<R> {
+impl<R: Rng + Send + Sync> Hittable for BVHNode<R> {
     type R = R;
 
     fn bounding_box(&self, _time0: crate::Float, _time1: crate::Float) -> Option<AABB> {
@@ -52,7 +52,7 @@ impl<R: 'static + Rng + Send + Sync> Hittable for BVHNode<R> {
     }
 }
 
-impl<R: Rng + 'static + Send + Sync> BVHNode<R> {
+impl<R: 'static + Rng + Send + Sync> BVHNode<R> {
     pub fn new(
         mut objects: Vec<Box<dyn Hittable<R = R>>>,
         time0: Float,

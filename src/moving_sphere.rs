@@ -8,10 +8,10 @@ use crate::{
     hittable::{HitRecord, Hittable},
     material::Material,
     math::sphere_uv,
-    Float, MyRng,
+    Float,
 };
 
-pub struct MovingSphere<R: Rng> {
+pub struct MovingSphere<R> {
     pub center0: Point3<Float>,
     pub center1: Point3<Float>,
     pub time0: Float,
@@ -27,7 +27,7 @@ impl<R: Rng> MovingSphere<R> {
     }
 }
 
-impl<R: 'static + Rng + Send + Sync> Hittable for MovingSphere<R> {
+impl<R: Rng + Send + Sync> Hittable for MovingSphere<R> {
     type R = R;
 
     #[allow(clippy::suspicious_operation_groupings)]

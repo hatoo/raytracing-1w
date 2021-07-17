@@ -316,9 +316,8 @@ fn random_scene<R: 'static + Rng + Send + Sync>(rng: &mut R) -> BVHNode<R> {
     BVHNode::new(world, 0.0, 1.0, rng)
 }
 
-/*
-fn two_spheres<R: Rng>(rng: &mut R) -> BVHNode<R> {
-    let checker_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+fn two_spheres<R: 'static + Rng + Send + Sync>(rng: &mut R) -> BVHNode<R> {
+    let checker_material: Arc<Box<dyn Material<R = R>>> = Arc::new(Box::new(Lambertian {
         albedo: CheckerTexture {
             even: SolidColor {
                 color_value: Color(vec3(0.2, 0.3, 0.1)),
@@ -327,9 +326,10 @@ fn two_spheres<R: Rng>(rng: &mut R) -> BVHNode<R> {
                 color_value: Color(vec3(0.9, 0.9, 0.9)),
             },
         },
+        _phantom: Default::default(),
     }));
 
-    let world: Vec<Box<dyn Hittable>> = vec![
+    let world: Vec<Box<dyn Hittable<R = R>>> = vec![
         Box::new(Sphere {
             center: point3(0.0, -10.0, 0.0),
             radius: 10.0,
@@ -345,12 +345,13 @@ fn two_spheres<R: Rng>(rng: &mut R) -> BVHNode<R> {
     BVHNode::new(world, 0.0, 1.0, rng)
 }
 
-fn two_perlin_spheres<R: Rng>(rng: &mut R) -> BVHNode<R> {
-    let pertext: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+fn two_perlin_spheres<R: 'static + Rng + Send + Sync>(rng: &mut R) -> BVHNode<R> {
+    let pertext: Arc<Box<dyn Material<R = R>>> = Arc::new(Box::new(Lambertian {
         albedo: NoiseTexture256::new(4.0, rng),
+        _phantom: Default::default(),
     }));
 
-    let world: Vec<Box<dyn Hittable>> = vec![
+    let world: Vec<Box<dyn Hittable<R = R>>> = vec![
         Box::new(Sphere {
             center: point3(0.0, -1000.0, 0.0),
             radius: 1000.0,
@@ -366,6 +367,7 @@ fn two_perlin_spheres<R: Rng>(rng: &mut R) -> BVHNode<R> {
     BVHNode::new(world, 0.0, 1.0, rng)
 }
 
+/*
 fn earth<R: Rng>(rng: &mut R) -> BVHNode<R> {
     const EARTH_JPG: &[u8] = include_bytes!("../assets/earthmap.jpg");
     let image = load_from_memory(EARTH_JPG).unwrap();

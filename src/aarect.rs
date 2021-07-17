@@ -11,7 +11,7 @@ use crate::{
     Float,
 };
 
-pub struct XYRect<R: 'static + Rng + Send + Sync> {
+pub struct XYRect<R> {
     pub x0: Float,
     pub x1: Float,
     pub y0: Float,
@@ -20,7 +20,7 @@ pub struct XYRect<R: 'static + Rng + Send + Sync> {
     pub material: Arc<Box<dyn Material<R = R>>>,
 }
 
-pub struct XZRect<R: 'static + Rng + Send + Sync> {
+pub struct XZRect<R> {
     pub x0: Float,
     pub x1: Float,
     pub z0: Float,
@@ -29,7 +29,7 @@ pub struct XZRect<R: 'static + Rng + Send + Sync> {
     pub material: Arc<Box<dyn Material<R = R>>>,
 }
 
-pub struct YZRect<R: 'static + Rng + Send + Sync> {
+pub struct YZRect<R> {
     pub y0: Float,
     pub y1: Float,
     pub z0: Float,

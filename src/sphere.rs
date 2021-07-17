@@ -11,7 +11,7 @@ use crate::{
     math::{random_to_sphere, sphere_uv},
     onb::Onb,
     ray::Ray,
-    Float, MyRng,
+    Float,
 };
 
 pub struct Sphere<R: Rng> {
@@ -20,7 +20,7 @@ pub struct Sphere<R: Rng> {
     pub material: Arc<Box<dyn Material<R = R>>>,
 }
 
-impl<R: 'static + Rng + Send + Sync> Hittable for Sphere<R> {
+impl<R: Rng + Send + Sync> Hittable for Sphere<R> {
     type R = R;
 
     #[allow(clippy::suspicious_operation_groupings)]

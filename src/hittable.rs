@@ -7,7 +7,7 @@ use cgmath::{dot, point3, vec3, Angle, Deg, Point3, Rad, Vector3};
 use rand::prelude::SliceRandom;
 use rand::Rng;
 
-pub struct HitRecord<R: 'static + Rng + Send + Sync> {
+pub struct HitRecord<R> {
     pub position: Point3<Float>,
     pub normal: Vector3<Float>,
     pub t: Float,
@@ -17,7 +17,7 @@ pub struct HitRecord<R: 'static + Rng + Send + Sync> {
     pub material: Arc<Box<dyn Material<R = R>>>,
 }
 
-impl<R: 'static + Rng + Send + Sync> HitRecord<R> {
+impl<R: Rng> HitRecord<R> {
     pub fn new(
         position: Point3<Float>,
         outward_normal: Vector3<Float>,
@@ -61,7 +61,7 @@ pub struct RotateY<T> {
 pub struct FlipFace<T>(pub T);
 
 pub trait Hittable: Send + Sync {
-    type R: 'static + Rng + Send + Sync;
+    type R: Rng + Send + Sync;
     fn hit(
         &self,
         ray: &Ray,
