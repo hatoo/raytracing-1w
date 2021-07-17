@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, marker::PhantomData};
 
 use crate::{
     onb::Onb,
@@ -10,29 +10,36 @@ use cgmath::{dot, vec3, InnerSpace, Point3, Vector3};
 use num_traits::FloatConst;
 use rand::Rng;
 
-use crate::{color::Color, hittable::HitRecord, math::random_in_unit_sphere, ray::Ray, MyRng};
+use crate::{color::Color, hittable::HitRecord, math::random_in_unit_sphere, ray::Ray};
 
-pub enum ScatterKind {
+pub enum ScatterKind<R: Rng> {
     Spacular(Ray),
-    Pdf(Box<dyn Pdf>),
+    Pdf(Box<dyn Pdf<R = R>>),
 }
 
-pub struct Scatter {
-    pub kind: ScatterKind,
+pub struct Scatter<R: Rng> {
+    pub kind: ScatterKind<R>,
     pub attenuation: Color,
 }
 
-pub trait Material: Debug + Send + Sync {
-    fn scatter(&self, _ray: &Ray, _hit_record: &HitRecord, _rng: &mut MyRng) -> Option<Scatter> {
+pub trait Material: Send + Sync {
+    type R: 'static + Rng + Send + Sync;
+
+    fn scatter(
+        &self,
+        _ray: &Ray,
+        _hit_record: &HitRecord<Self::R>,
+        _rng: &mut Self::R,
+    ) -> Option<Scatter<Self::R>> {
         None
     }
 
     fn scattering_pdf(
         &self,
         _ray_in: &Ray,
-        _hit_record: &HitRecord,
+        _hit_record: &HitRecord<Self::R>,
         _ray_scatterd: &Ray,
-        _rng: &mut MyRng,
+        _rng: &mut Self::R,
     ) -> Float {
         0.0
     }
@@ -40,7 +47,7 @@ pub trait Material: Debug + Send + Sync {
     fn emitted(
         &self,
         _ray_in: &Ray,
-        _hit_record: &HitRecord,
+        _hit_record: &HitRecord<Self::R>,
         _u: Float,
         _v: Float,
         _p: Point3<Float>,
@@ -50,31 +57,39 @@ pub trait Material: Debug + Send + Sync {
 }
 
 #[derive(Debug)]
-pub struct Lambertian<T> {
+pub struct Lambertian<T, R> {
     pub albedo: T,
+    pub _phantom: PhantomData<R>,
 }
 
 #[derive(Debug)]
-pub struct Metal {
+pub struct Metal<R> {
     pub albedo: Color,
     pub fuzz: Float,
+    pub _phantom: PhantomData<R>,
 }
 
 #[derive(Debug)]
-pub struct DiffuseLight<T> {
+pub struct DiffuseLight<T, R> {
     pub emit: T,
+    pub _phantom: PhantomData<R>,
 }
 
-impl Material for () {}
+impl<R: 'static + Rng + Send + Sync> Material for PhantomData<R> {
+    type R = R;
+}
 
-impl<T: Texture> Material for Lambertian<T> {
-    fn scatter(&self, _ray: &Ray, hit_record: &HitRecord, _rng: &mut MyRng) -> Option<Scatter> {
+impl<T: Texture, R: 'static + Rng + Send + Sync> Material for Lambertian<T, R> {
+    type R = R;
+
+    fn scatter(&self, _ray: &Ray, hit_record: &HitRecord<R>, _rng: &mut R) -> Option<Scatter<R>> {
         Some(Scatter {
             attenuation: self
                 .albedo
                 .value(hit_record.u, hit_record.v, hit_record.position),
             kind: ScatterKind::Pdf(Box::new(CosinePdf {
                 uvw: Onb::from_w(hit_record.normal),
+                _phantom: Default::default(),
             })),
         })
     }
@@ -82,9 +97,9 @@ impl<T: Texture> Material for Lambertian<T> {
     fn scattering_pdf(
         &self,
         _ray_in: &Ray,
-        hit_record: &HitRecord,
+        hit_record: &HitRecord<R>,
         ray_scatterd: &Ray,
-        _rng: &mut MyRng,
+        _rng: &mut R,
     ) -> Float {
         let cosine = dot(hit_record.normal, ray_scatterd.direction.normalize());
         (cosine / Float::PI()).max(0.0)
@@ -95,8 +110,10 @@ fn reflect(v: Vector3<Float>, n: Vector3<Float>) -> Vector3<Float> {
     v - 2.0 * dot(v, n) * n
 }
 
-impl Material for Metal {
-    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
+impl<R: 'static + Rng + Send + Sync> Material for Metal<R> {
+    type R = R;
+
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord<R>, rng: &mut R) -> Option<Scatter<R>> {
         let reflected = reflect(ray.direction.normalize(), hit_record.normal);
         let spacular_ray = Ray {
             origin: hit_record.position,
@@ -124,13 +141,15 @@ fn reflectance(cosine: Float, ref_idx: Float) -> Float {
     r0 + (1.0 - r0) * (1.0 - cosine).powf(5.0)
 }
 
-#[derive(Debug)]
-pub struct Dielectric {
+pub struct Dielectric<R> {
     pub ir: Float,
+    pub _phantom: PhantomData<R>,
 }
 
-impl Material for Dielectric {
-    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
+impl<R: 'static + Rng + Send + Sync> Material for Dielectric<R> {
+    type R = R;
+
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord<R>, rng: &mut R) -> Option<Scatter<R>> {
         let refraction_ratio = if hit_record.front_face {
             1.0 / self.ir
         } else {
@@ -160,15 +179,17 @@ impl Material for Dielectric {
     }
 }
 
-impl<T: Texture> Material for DiffuseLight<T> {
-    fn scatter(&self, _ray: &Ray, _hit_record: &HitRecord, _rng: &mut MyRng) -> Option<Scatter> {
+impl<T: Texture, R: 'static + Rng + Send + Sync> Material for DiffuseLight<T, R> {
+    type R = R;
+
+    fn scatter(&self, _ray: &Ray, _hit_record: &HitRecord<R>, _rng: &mut R) -> Option<Scatter<R>> {
         None
     }
 
     fn emitted(
         &self,
         _ray_in: &Ray,
-        hit_record: &HitRecord,
+        hit_record: &HitRecord<R>,
         u: Float,
         v: Float,
         p: Point3<Float>,

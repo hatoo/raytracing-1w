@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use cgmath::{dot, vec3, EuclideanSpace, InnerSpace, Point3};
+use rand::Rng;
 
 use crate::{
     aabb::{surrounding_box, AABB},
@@ -10,31 +11,33 @@ use crate::{
     Float, MyRng,
 };
 
-pub struct MovingSphere {
+pub struct MovingSphere<R: Rng> {
     pub center0: Point3<Float>,
     pub center1: Point3<Float>,
     pub time0: Float,
     pub time1: Float,
     pub radius: Float,
-    pub material: Arc<Box<dyn Material>>,
+    pub material: Arc<Box<dyn Material<R = R>>>,
 }
 
-impl MovingSphere {
+impl<R: Rng> MovingSphere<R> {
     pub fn center(&self, time: Float) -> Point3<Float> {
         self.center0
             + ((time - self.time0) / (self.time1 - self.time0)) * (self.center1 - self.center0)
     }
 }
 
-impl Hittable for MovingSphere {
+impl<R: 'static + Rng + Send + Sync> Hittable for MovingSphere<R> {
+    type R = R;
+
     #[allow(clippy::suspicious_operation_groupings)]
     fn hit(
         &self,
         ray: &crate::ray::Ray,
         t_min: Float,
         t_max: Float,
-        _rng: &mut MyRng,
-    ) -> Option<HitRecord> {
+        _rng: &mut R,
+    ) -> Option<HitRecord<R>> {
         let oc = ray.origin - self.center(ray.time);
         let a = ray.direction.magnitude2();
         let half_b = dot(oc, ray.direction);

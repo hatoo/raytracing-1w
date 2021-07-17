@@ -19,9 +19,12 @@ mod ray;
 mod sphere;
 mod texture;
 
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc,
+use std::{
+    marker::PhantomData,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
 };
 
 use cgmath::{point3, prelude::*, vec3, Deg};
@@ -48,7 +51,7 @@ use crate::{
     texture::{CheckerTexture, NoiseTexture256, SolidColor},
 };
 
-fn ray_color<H: Hittable + ?Sized, L: Hittable + ?Sized>(
+fn ray_color<H: Hittable<R = MyRng> + ?Sized, L: Hittable<R = MyRng> + ?Sized>(
     ray: &Ray,
     background: Color,
     world: &H,
@@ -76,9 +79,14 @@ fn ray_color<H: Hittable + ?Sized, L: Hittable + ?Sized>(
                     let p0 = HittablePdf {
                         hittable: lights,
                         o: hit_record.position,
+                        _phantom: Default::default(),
                     };
 
-                    let mixed_pdf = MixturePdf { p0, p1: pdf };
+                    let mixed_pdf = MixturePdf {
+                        p0,
+                        p1: pdf,
+                        _phantom: Default::default(),
+                    };
 
                     let scatterd = Ray {
                         origin: hit_record.position,
@@ -120,7 +128,7 @@ fn ray_color_without_light_objects<H: Hittable + ?Sized>(
     background: Color,
     world: &H,
     depth: usize,
-    rng: &mut MyRng,
+    rng: &mut H::R,
 ) -> Color {
     if depth == 0 {
         return Color(vec3(0.0, 0.0, 0.0));
@@ -189,8 +197,8 @@ fn ray_color_without_light_objects<H: Hittable + ?Sized>(
     }
 }
 
-fn random_scene(rng: &mut impl Rng) -> BVHNode {
-    let ground_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
+fn random_scene<R: 'static + Rng + Send + Sync>(rng: &mut R) -> BVHNode<R> {
+    let ground_material: Arc<Box<dyn Material<R = R>>> = Arc::new(Box::new(Lambertian {
         albedo: CheckerTexture {
             even: SolidColor {
                 color_value: Color(vec3(0.2, 0.3, 0.1)),
@@ -199,9 +207,10 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
                 color_value: Color(vec3(0.9, 0.9, 0.9)),
             },
         },
+        _phantom: Default::default(),
     }));
 
-    let mut world: Vec<Box<dyn Hittable>> = vec![Box::new(Sphere {
+    let mut world: Vec<Box<dyn Hittable<R = R>>> = vec![Box::new(Sphere {
         center: point3(0.0, -1000.0, 0.0),
         radius: 1000.0,
         material: ground_material,
@@ -217,16 +226,18 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
             );
 
             if (center - point3(4.0, 0.2, 0.0)).magnitude() > 0.9 {
-                let hittable: Box<dyn Hittable> = match choose_mat {
+                let hittable: Box<dyn Hittable<R = R>> = match choose_mat {
                     x if x < 0.8 => {
                         let albedo =
                             Color(rng.gen::<Color>().0.mul_element_wise(rng.gen::<Color>().0));
                         let center2 = center + vec3(0.0, rng.gen_range(0.0..0.5), 0.0);
-                        let material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
-                            albedo: SolidColor {
-                                color_value: albedo,
-                            },
-                        }));
+                        let material: Arc<Box<dyn Material<R = R>>> =
+                            Arc::new(Box::new(Lambertian {
+                                albedo: SolidColor {
+                                    color_value: albedo,
+                                },
+                                _phantom: Default::default(),
+                            }));
                         Box::new(MovingSphere {
                             center0: center,
                             center1: center2,
@@ -243,8 +254,11 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
                             rng.gen_range(0.5..1.0),
                         ));
                         let fuzz = rng.gen_range(0.5..1.0);
-                        let material: Arc<Box<dyn Material>> =
-                            Arc::new(Box::new(Metal { albedo, fuzz }));
+                        let material: Arc<Box<dyn Material<R = R>>> = Arc::new(Box::new(Metal {
+                            albedo,
+                            fuzz,
+                            _phantom: Default::default(),
+                        }));
                         Box::new(Sphere {
                             center,
                             radius: 0.2,
@@ -252,8 +266,11 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
                         })
                     }
                     _ => {
-                        let material: Arc<Box<dyn Material>> =
-                            Arc::new(Box::new(Dielectric { ir: 1.5 }));
+                        let material: Arc<Box<dyn Material<R = R>>> =
+                            Arc::new(Box::new(Dielectric {
+                                ir: 1.5,
+                                _phantom: Default::default(),
+                            }));
                         Box::new(Sphere {
                             center,
                             radius: 0.2,
@@ -269,7 +286,10 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
     world.push(Box::new(Sphere {
         center: point3(0.0, 1.0, 0.0),
         radius: 1.0,
-        material: Arc::new(Box::new(Dielectric { ir: 1.5 })),
+        material: Arc::new(Box::new(Dielectric {
+            ir: 1.5,
+            _phantom: Default::default(),
+        })),
     }));
 
     world.push(Box::new(Sphere {
@@ -279,6 +299,7 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
             albedo: SolidColor {
                 color_value: Color(vec3(0.4, 0.2, 0.1)),
             },
+            _phantom: Default::default(),
         })),
     }));
 
@@ -288,13 +309,15 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
         material: Arc::new(Box::new(Metal {
             albedo: Color(vec3(0.7, 0.6, 0.5)),
             fuzz: 0.0,
+            _phantom: Default::default(),
         })),
     }));
 
     BVHNode::new(world, 0.0, 1.0, rng)
 }
 
-fn two_spheres(rng: &mut impl Rng) -> BVHNode {
+/*
+fn two_spheres<R: Rng>(rng: &mut R) -> BVHNode<R> {
     let checker_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
         albedo: CheckerTexture {
             even: SolidColor {
@@ -322,7 +345,7 @@ fn two_spheres(rng: &mut impl Rng) -> BVHNode {
     BVHNode::new(world, 0.0, 1.0, rng)
 }
 
-fn two_perlin_spheres(rng: &mut impl Rng) -> BVHNode {
+fn two_perlin_spheres<R: Rng>(rng: &mut R) -> BVHNode<R> {
     let pertext: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
         albedo: NoiseTexture256::new(4.0, rng),
     }));
@@ -343,7 +366,7 @@ fn two_perlin_spheres(rng: &mut impl Rng) -> BVHNode {
     BVHNode::new(world, 0.0, 1.0, rng)
 }
 
-fn earth(rng: &mut impl Rng) -> BVHNode {
+fn earth<R: Rng>(rng: &mut R) -> BVHNode<R> {
     const EARTH_JPG: &[u8] = include_bytes!("../assets/earthmap.jpg");
     let image = load_from_memory(EARTH_JPG).unwrap();
     let earth_surface: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian { albedo: image }));
@@ -357,7 +380,7 @@ fn earth(rng: &mut impl Rng) -> BVHNode {
     BVHNode::new(vec![globe], 0.0, 1.0, rng)
 }
 
-fn simple_light(rng: &mut impl Rng) -> BVHNode {
+fn simple_light<R: Rng>(rng: &mut R) -> BVHNode<R> {
     let pertext: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
         albedo: NoiseTexture256::new(4.0, rng),
     }));
@@ -392,7 +415,7 @@ fn simple_light(rng: &mut impl Rng) -> BVHNode {
     BVHNode::new(world, 0.0, 1.0, rng)
 }
 
-fn cornel_box(rng: &mut impl Rng) -> BVHNode {
+fn cornel_box<R: Rng>(rng: &mut R) -> BVHNode<R> {
     let red: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
         albedo: SolidColor {
             color_value: Color(vec3(0.65, 0.05, 0.05)),
@@ -511,7 +534,7 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
     BVHNode::new(world, 0.0, 1.0, rng)
 }
 
-fn cornel_smoke(rng: &mut impl Rng) -> BVHNode {
+fn cornel_smoke<R: Rng>(rng: &mut R) -> BVHNode<R> {
     let red: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
         albedo: SolidColor {
             color_value: Color(vec3(0.65, 0.05, 0.05)),
@@ -632,7 +655,7 @@ fn cornel_smoke(rng: &mut impl Rng) -> BVHNode {
     BVHNode::new(world, 0.0, 1.0, rng)
 }
 
-fn final_scene(rng: &mut impl Rng) -> BVHNode {
+fn final_scene<R: Rng>(rng: &mut R) -> BVHNode<R> {
     let ground: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
         albedo: SolidColor {
             color_value: Color(vec3(0.48, 0.83, 0.53)),
@@ -793,6 +816,7 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
     objects.push(boxes2);
     BVHNode::new(objects, 0.0, 1.0, rng)
 }
+*/
 
 fn main() {
     let mut aspect_ratio: Float = 16.0 / 9.0;
@@ -802,18 +826,18 @@ fn main() {
 
     let mut rng = MyRng::from_entropy();
 
-    let null_mat: Arc<Box<dyn Material>> = Arc::new(Box::new(()));
+    let null_mat: Arc<Box<dyn Material<R = MyRng>>> = Arc::new(Box::new(PhantomData));
 
     let (world, lights, background, look_from, look_at, vfov, aperture): (
         _,
-        Option<Vec<Box<dyn Hittable>>>,
+        Option<Vec<Box<dyn Hittable<R = MyRng>>>>,
         _,
         _,
         _,
         _,
         _,
     ) = match 5 {
-        0 => {
+        _ => {
             samples_per_pixel = 500;
             (
                 random_scene(&mut rng),
@@ -824,116 +848,117 @@ fn main() {
                 Deg(20.0),
                 0.1,
             )
-        }
-        1 => (
-            two_spheres(&mut rng),
-            None,
-            Color(vec3(0.70, 0.80, 1.00)),
-            point3(13.0, 2.0, 3.0),
-            point3(0.0, 0.0, 0.0),
-            Deg(20.0),
-            0.0,
-        ),
-        2 => (
-            two_perlin_spheres(&mut rng),
-            None,
-            Color(vec3(0.70, 0.80, 1.00)),
-            point3(13.0, 2.0, 3.0),
-            point3(0.0, 0.0, 0.0),
-            Deg(20.0),
-            0.0,
-        ),
-        3 => (
-            earth(&mut rng),
-            None,
-            Color(vec3(0.70, 0.80, 1.00)),
-            point3(13.0, 2.0, 3.0),
-            point3(0.0, 0.0, 0.0),
-            Deg(20.0),
-            0.0,
-        ),
-        4 => {
-            samples_per_pixel = 400;
-            (
-                simple_light(&mut rng),
-                None,
-                Color(vec3(0.0, 0.0, 0.0)),
-                point3(26.0, 3.0, 6.0),
-                point3(0.0, 2.0, 0.0),
-                Deg(20.0),
-                0.0,
-            )
-        }
-        5 => {
-            aspect_ratio = 1.0;
-            image_width = 600;
-            samples_per_pixel = 100;
-            (
-                cornel_box(&mut rng),
-                Some(vec![
-                    Box::new(XZRect {
-                        x0: 213.0,
-                        x1: 343.0,
-                        z0: 227.0,
-                        z1: 332.0,
-                        k: 554.0,
-                        material: null_mat.clone(),
-                    }),
-                    Box::new(Sphere {
-                        center: point3(190.0, 90.0, 190.0),
-                        radius: 90.0,
-                        material: null_mat.clone(),
-                    }),
-                ]),
-                Color(vec3(0.0, 0.0, 0.0)),
-                point3(278.0, 278.0, -800.0),
-                point3(278.0, 278.0, 0.0),
-                Deg(40.0),
-                0.0,
-            )
-        }
-        6 => {
-            aspect_ratio = 1.0;
-            image_width = 600;
-            samples_per_pixel = 200;
-            (
-                cornel_smoke(&mut rng),
-                Some(vec![Box::new(XZRect {
-                    x0: 113.0,
-                    x1: 443.0,
-                    z0: 127.0,
-                    z1: 432.0,
-                    k: 554.0,
-                    material: null_mat,
-                })]),
-                Color(vec3(0.0, 0.0, 0.0)),
-                point3(278.0, 278.0, -800.0),
-                point3(278.0, 278.0, 0.0),
-                Deg(40.0),
-                0.0,
-            )
-        }
-        _ => {
-            aspect_ratio = 1.0;
-            image_width = 800;
-            samples_per_pixel = 10000;
-            (
-                final_scene(&mut rng),
-                Some(vec![Box::new(XZRect {
-                    x0: 123.0,
-                    x1: 423.0,
-                    z0: 147.0,
-                    z1: 412.0,
-                    k: 554.0,
-                    material: null_mat,
-                })]),
-                Color(vec3(0.0, 0.0, 0.0)),
-                point3(478.0, 278.0, -600.0),
-                point3(278.0, 278.0, 0.0),
-                Deg(40.0),
-                0.0,
-            )
-        }
+        } /*
+          1 => (
+              two_spheres(&mut rng),
+              None,
+              Color(vec3(0.70, 0.80, 1.00)),
+              point3(13.0, 2.0, 3.0),
+              point3(0.0, 0.0, 0.0),
+              Deg(20.0),
+              0.0,
+          ),
+          2 => (
+              two_perlin_spheres(&mut rng),
+              None,
+              Color(vec3(0.70, 0.80, 1.00)),
+              point3(13.0, 2.0, 3.0),
+              point3(0.0, 0.0, 0.0),
+              Deg(20.0),
+              0.0,
+          ),
+          3 => (
+              earth(&mut rng),
+              None,
+              Color(vec3(0.70, 0.80, 1.00)),
+              point3(13.0, 2.0, 3.0),
+              point3(0.0, 0.0, 0.0),
+              Deg(20.0),
+              0.0,
+          ),
+          4 => {
+              samples_per_pixel = 400;
+              (
+                  simple_light(&mut rng),
+                  None,
+                  Color(vec3(0.0, 0.0, 0.0)),
+                  point3(26.0, 3.0, 6.0),
+                  point3(0.0, 2.0, 0.0),
+                  Deg(20.0),
+                  0.0,
+              )
+          }
+          5 => {
+              aspect_ratio = 1.0;
+              image_width = 600;
+              samples_per_pixel = 100;
+              (
+                  cornel_box(&mut rng),
+                  Some(vec![
+                      Box::new(XZRect {
+                          x0: 213.0,
+                          x1: 343.0,
+                          z0: 227.0,
+                          z1: 332.0,
+                          k: 554.0,
+                          material: null_mat.clone(),
+                      }),
+                      Box::new(Sphere {
+                          center: point3(190.0, 90.0, 190.0),
+                          radius: 90.0,
+                          material: null_mat.clone(),
+                      }),
+                  ]),
+                  Color(vec3(0.0, 0.0, 0.0)),
+                  point3(278.0, 278.0, -800.0),
+                  point3(278.0, 278.0, 0.0),
+                  Deg(40.0),
+                  0.0,
+              )
+          }
+          6 => {
+              aspect_ratio = 1.0;
+              image_width = 600;
+              samples_per_pixel = 200;
+              (
+                  cornel_smoke(&mut rng),
+                  Some(vec![Box::new(XZRect {
+                      x0: 113.0,
+                      x1: 443.0,
+                      z0: 127.0,
+                      z1: 432.0,
+                      k: 554.0,
+                      material: null_mat,
+                  })]),
+                  Color(vec3(0.0, 0.0, 0.0)),
+                  point3(278.0, 278.0, -800.0),
+                  point3(278.0, 278.0, 0.0),
+                  Deg(40.0),
+                  0.0,
+              )
+          }
+          _ => {
+              aspect_ratio = 1.0;
+              image_width = 800;
+              samples_per_pixel = 10000;
+              (
+                  final_scene(&mut rng),
+                  Some(vec![Box::new(XZRect {
+                      x0: 123.0,
+                      x1: 423.0,
+                      z0: 147.0,
+                      z1: 412.0,
+                      k: 554.0,
+                      material: null_mat,
+                  })]),
+                  Color(vec3(0.0, 0.0, 0.0)),
+                  point3(478.0, 278.0, -600.0),
+                  point3(278.0, 278.0, 0.0),
+                  Deg(40.0),
+                  0.0,
+              )
+          }
+          */
     };
 
     let image_height: usize = (image_width as Float / aspect_ratio) as usize;

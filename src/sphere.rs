@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use cgmath::{dot, prelude::*, vec3, Point3, Vector3};
 use num_traits::FloatConst;
+use rand::Rng;
 
 use crate::{
     aabb::AABB,
@@ -13,21 +14,23 @@ use crate::{
     Float, MyRng,
 };
 
-pub struct Sphere {
+pub struct Sphere<R: Rng> {
     pub center: Point3<Float>,
     pub radius: Float,
-    pub material: Arc<Box<dyn Material>>,
+    pub material: Arc<Box<dyn Material<R = R>>>,
 }
 
-impl Hittable for Sphere {
+impl<R: 'static + Rng + Send + Sync> Hittable for Sphere<R> {
+    type R = R;
+
     #[allow(clippy::suspicious_operation_groupings)]
     fn hit(
         &self,
         ray: &crate::ray::Ray,
         t_min: Float,
         t_max: Float,
-        _rng: &mut MyRng,
-    ) -> Option<HitRecord> {
+        _rng: &mut R,
+    ) -> Option<HitRecord<R>> {
         let oc = ray.origin - self.center;
         let a = ray.direction.magnitude2();
         let half_b = dot(oc, ray.direction);
@@ -69,7 +72,7 @@ impl Hittable for Sphere {
         })
     }
 
-    fn pdf_value(&self, o: Point3<Float>, v: Vector3<Float>, rng: &mut MyRng) -> Float {
+    fn pdf_value(&self, o: Point3<Float>, v: Vector3<Float>, rng: &mut R) -> Float {
         self.hit(
             &Ray {
                 origin: o,
@@ -89,7 +92,7 @@ impl Hittable for Sphere {
         .unwrap_or(0.0)
     }
 
-    fn random(&self, o: Point3<Float>, rng: &mut MyRng) -> Vector3<Float> {
+    fn random(&self, o: Point3<Float>, rng: &mut R) -> Vector3<Float> {
         let direction = self.center - o;
         let distance_squared = direction.magnitude2();
 

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{marker::PhantomData, sync::Arc};
 
 use cgmath::{vec3, InnerSpace};
 use rand::Rng;
@@ -9,32 +9,38 @@ use crate::{
     math::random_in_unit_sphere,
     ray::Ray,
     texture::Texture,
-    Float, MyRng,
+    Float,
 };
 
-pub struct ConstantMedium<T> {
+pub struct ConstantMedium<T, R: 'static + Rng + Send + Sync> {
     boundary: T,
-    phase_function: Arc<Box<dyn Material>>,
+    phase_function: Arc<Box<dyn Material<R = R>>>,
     neg_inv_density: Float,
 }
 
-impl<T> ConstantMedium<T> {
+impl<T, R: 'static + Rng + Send + Sync> ConstantMedium<T, R> {
     pub fn new(boundary: T, d: Float, texture: Box<dyn Texture>) -> Self {
         Self {
             boundary,
-            phase_function: Arc::new(Box::new(Isotropic { albedo: texture })),
+            phase_function: Arc::new(Box::new(Isotropic {
+                albedo: texture,
+                _phantom: Default::default(),
+            })),
             neg_inv_density: -1.0 / d,
         }
     }
 }
 
 #[derive(Debug)]
-pub struct Isotropic {
+struct Isotropic<R> {
     albedo: Box<dyn Texture>,
+    _phantom: PhantomData<R>,
 }
 
-impl Material for Isotropic {
-    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
+impl<R: 'static + Rng + Send + Sync> Material for Isotropic<R> {
+    type R = R;
+
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord<R>, rng: &mut R) -> Option<Scatter<R>> {
         let attenuation = self
             .albedo
             .value(hit_record.u, hit_record.v, hit_record.position);
@@ -50,12 +56,20 @@ impl Material for Isotropic {
     }
 }
 
-impl<T: Hittable> Hittable for ConstantMedium<T> {
+impl<R: 'static + Rng + Send + Sync, T: Hittable<R = R>> Hittable for ConstantMedium<T, R> {
+    type R = R;
+
     fn bounding_box(&self, time0: Float, time1: Float) -> Option<crate::aabb::AABB> {
         self.boundary.bounding_box(time0, time1)
     }
 
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: Float,
+        t_max: Float,
+        rng: &mut Self::R,
+    ) -> Option<HitRecord<R>> {
         const ENABLE_DEBUG: bool = false;
         let debugging = ENABLE_DEBUG && rng.gen::<Float>() < 0.00001;
 

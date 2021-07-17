@@ -9,23 +9,23 @@ use crate::{
     bvh::BVHNode,
     hittable::Hittable,
     material::Material,
-    Float, MyRng,
+    Float,
 };
 
-pub struct AABox {
+pub struct AABox<R: Rng> {
     box_min: Point3<Float>,
     box_max: Point3<Float>,
-    sides: BVHNode,
+    sides: BVHNode<R>,
 }
 
-impl AABox {
+impl<R: Rng + Send + Sync + 'static> AABox<R> {
     pub fn new(
         p0: Point3<Float>,
         p1: Point3<Float>,
-        material: Arc<Box<dyn Material>>,
-        rng: &mut impl Rng,
+        material: Arc<Box<dyn Material<R = R>>>,
+        rng: &mut R,
     ) -> Self {
-        let sides: Vec<Box<dyn Hittable>> = vec![
+        let sides: Vec<Box<dyn Hittable<R = R>>> = vec![
             Box::new(XYRect {
                 x0: p0.x,
                 x1: p1.x,
@@ -84,14 +84,15 @@ impl AABox {
     }
 }
 
-impl Hittable for AABox {
+impl<R: 'static + Rng + Send + Sync> Hittable for AABox<R> {
+    type R = R;
     fn hit(
         &self,
         ray: &crate::ray::Ray,
         t_min: Float,
         t_max: Float,
-        rng: &mut MyRng,
-    ) -> Option<crate::hittable::HitRecord> {
+        rng: &mut R,
+    ) -> Option<crate::hittable::HitRecord<R>> {
         self.sides.hit(ray, t_min, t_max, rng)
     }
 

@@ -1,23 +1,23 @@
 use std::sync::Arc;
 
 use crate::aabb::{surrounding_box, AABB};
+use crate::Float;
 use crate::{material::Material, ray::Ray};
-use crate::{Float, MyRng};
 use cgmath::{dot, point3, vec3, Angle, Deg, Point3, Rad, Vector3};
 use rand::prelude::SliceRandom;
+use rand::Rng;
 
-#[derive(Clone, Debug)]
-pub struct HitRecord {
+pub struct HitRecord<R: 'static + Rng + Send + Sync> {
     pub position: Point3<Float>,
     pub normal: Vector3<Float>,
     pub t: Float,
     pub u: Float,
     pub v: Float,
     pub front_face: bool,
-    pub material: Arc<Box<dyn Material>>,
+    pub material: Arc<Box<dyn Material<R = R>>>,
 }
 
-impl HitRecord {
+impl<R: 'static + Rng + Send + Sync> HitRecord<R> {
     pub fn new(
         position: Point3<Float>,
         outward_normal: Vector3<Float>,
@@ -25,7 +25,7 @@ impl HitRecord {
         u: Float,
         v: Float,
         ray: &Ray,
-        material: Arc<Box<dyn Material>>,
+        material: Arc<Box<dyn Material<R = R>>>,
     ) -> Self {
         let front_face = dot(ray.direction, outward_normal) < 0.0;
         let normal = if front_face {
@@ -61,18 +61,32 @@ pub struct RotateY<T> {
 pub struct FlipFace<T>(pub T);
 
 pub trait Hittable: Send + Sync {
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord>;
+    type R: 'static + Rng + Send + Sync;
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: Float,
+        t_max: Float,
+        rng: &mut Self::R,
+    ) -> Option<HitRecord<Self::R>>;
     fn bounding_box(&self, time0: Float, time1: Float) -> Option<AABB>;
-    fn pdf_value(&self, _origin: Point3<Float>, _v: Vector3<Float>, _rng: &mut MyRng) -> Float {
+    fn pdf_value(&self, _origin: Point3<Float>, _v: Vector3<Float>, _rng: &mut Self::R) -> Float {
         0.0
     }
-    fn random(&self, _origin: Point3<Float>, _rng: &mut MyRng) -> Vector3<Float> {
+    fn random(&self, _origin: Point3<Float>, _rng: &mut Self::R) -> Vector3<Float> {
         vec3(1.0, 0.0, 0.0)
     }
 }
 
 impl<T: Hittable + ?Sized> Hittable for &T {
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
+    type R = T::R;
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: Float,
+        t_max: Float,
+        rng: &mut Self::R,
+    ) -> Option<HitRecord<Self::R>> {
         (*self).hit(ray, t_min, t_max, rng)
     }
 
@@ -80,17 +94,24 @@ impl<T: Hittable + ?Sized> Hittable for &T {
         (*self).bounding_box(time0, time1)
     }
 
-    fn pdf_value(&self, o: Point3<Float>, v: Vector3<Float>, rng: &mut MyRng) -> Float {
+    fn pdf_value(&self, o: Point3<Float>, v: Vector3<Float>, rng: &mut Self::R) -> Float {
         (*self).pdf_value(o, v, rng)
     }
 
-    fn random(&self, o: Point3<Float>, rng: &mut MyRng) -> Vector3<Float> {
+    fn random(&self, o: Point3<Float>, rng: &mut Self::R) -> Vector3<Float> {
         (*self).random(o, rng)
     }
 }
 
 impl<T: Hittable + ?Sized> Hittable for Box<T> {
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
+    type R = T::R;
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: Float,
+        t_max: Float,
+        rng: &mut Self::R,
+    ) -> Option<HitRecord<Self::R>> {
         self.as_ref().hit(ray, t_min, t_max, rng)
     }
 
@@ -98,17 +119,25 @@ impl<T: Hittable + ?Sized> Hittable for Box<T> {
         self.as_ref().bounding_box(time0, time1)
     }
 
-    fn pdf_value(&self, o: Point3<Float>, v: Vector3<Float>, rng: &mut MyRng) -> Float {
+    fn pdf_value(&self, o: Point3<Float>, v: Vector3<Float>, rng: &mut Self::R) -> Float {
         self.as_ref().pdf_value(o, v, rng)
     }
 
-    fn random(&self, o: Point3<Float>, rng: &mut MyRng) -> Vector3<Float> {
+    fn random(&self, o: Point3<Float>, rng: &mut Self::R) -> Vector3<Float> {
         self.as_ref().random(o, rng)
     }
 }
 
 impl<T: Hittable> Hittable for [T] {
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
+    type R = T::R;
+
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: Float,
+        t_max: Float,
+        rng: &mut Self::R,
+    ) -> Option<HitRecord<Self::R>> {
         let mut hit_record = None;
         let mut closest_so_far = t_max;
 
@@ -141,7 +170,7 @@ impl<T: Hittable> Hittable for [T] {
         b
     }
 
-    fn pdf_value(&self, o: Point3<Float>, v: Vector3<Float>, rng: &mut MyRng) -> Float {
+    fn pdf_value(&self, o: Point3<Float>, v: Vector3<Float>, rng: &mut Self::R) -> Float {
         let weight = 1.0 / self.len() as Float;
 
         self.iter()
@@ -149,7 +178,7 @@ impl<T: Hittable> Hittable for [T] {
             .sum()
     }
 
-    fn random(&self, o: Point3<Float>, rng: &mut MyRng) -> Vector3<Float> {
+    fn random(&self, o: Point3<Float>, rng: &mut Self::R) -> Vector3<Float> {
         self.choose(rng).unwrap().random(o, rng)
     }
 }
@@ -203,7 +232,15 @@ impl<T: Hittable> RotateY<T> {
 }
 
 impl<T: Hittable> Hittable for Translate<T> {
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
+    type R = T::R;
+
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: Float,
+        t_max: Float,
+        rng: &mut Self::R,
+    ) -> Option<HitRecord<Self::R>> {
         let moved = Ray {
             origin: ray.origin - self.offset,
             direction: ray.direction,
@@ -234,7 +271,15 @@ impl<T: Hittable> Hittable for Translate<T> {
 }
 
 impl<T: Hittable> Hittable for RotateY<T> {
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
+    type R = T::R;
+
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: Float,
+        t_max: Float,
+        rng: &mut Self::R,
+    ) -> Option<HitRecord<Self::R>> {
         let mut origin = ray.origin;
         let mut direction = ray.direction;
 
@@ -284,7 +329,15 @@ impl<T: Hittable> Hittable for RotateY<T> {
 }
 
 impl<T: Hittable> Hittable for FlipFace<T> {
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord> {
+    type R = T::R;
+
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: Float,
+        t_max: Float,
+        rng: &mut Self::R,
+    ) -> Option<HitRecord<Self::R>> {
         self.0.hit(ray, t_min, t_max, rng).map(|mut hit_record| {
             hit_record.front_face = !hit_record.front_face;
             hit_record

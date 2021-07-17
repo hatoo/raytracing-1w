@@ -4,20 +4,22 @@ use rand::Rng;
 use crate::{
     aabb::{surrounding_box, AABB},
     hittable::Hittable,
-    Float, MyRng,
+    Float,
 };
 
-enum BVHChild {
-    One(Box<dyn Hittable>),
-    Two(Box<dyn Hittable>, Box<dyn Hittable>),
+enum BVHChild<R: Rng> {
+    One(Box<dyn Hittable<R = R>>),
+    Two(Box<dyn Hittable<R = R>>, Box<dyn Hittable<R = R>>),
 }
 
-pub struct BVHNode {
-    child: BVHChild,
+pub struct BVHNode<R: Rng> {
+    child: BVHChild<R>,
     aabb: AABB,
 }
 
-impl Hittable for BVHNode {
+impl<R: 'static + Rng + Send + Sync> Hittable for BVHNode<R> {
+    type R = R;
+
     fn bounding_box(&self, _time0: crate::Float, _time1: crate::Float) -> Option<AABB> {
         Some(self.aabb)
     }
@@ -27,8 +29,8 @@ impl Hittable for BVHNode {
         ray: &crate::ray::Ray,
         t_min: crate::Float,
         t_max: crate::Float,
-        rng: &mut MyRng,
-    ) -> Option<crate::hittable::HitRecord> {
+        rng: &mut R,
+    ) -> Option<crate::hittable::HitRecord<R>> {
         if !self.aabb.hit(ray, t_min, t_max) {
             return None;
         }
@@ -50,12 +52,12 @@ impl Hittable for BVHNode {
     }
 }
 
-impl BVHNode {
+impl<R: Rng + 'static + Send + Sync> BVHNode<R> {
     pub fn new(
-        mut objects: Vec<Box<dyn Hittable>>,
+        mut objects: Vec<Box<dyn Hittable<R = R>>>,
         time0: Float,
         time1: Float,
-        rng: &mut impl Rng,
+        rng: &mut R,
     ) -> Self {
         match objects.len() {
             0 => panic!("objects mut not be empty"),

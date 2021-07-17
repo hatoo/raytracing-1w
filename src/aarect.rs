@@ -8,42 +8,41 @@ use crate::{
     hittable::{HitRecord, Hittable},
     material::Material,
     ray::Ray,
-    Float, MyRng,
+    Float,
 };
 
-#[derive(Debug)]
-pub struct XYRect {
+pub struct XYRect<R: 'static + Rng + Send + Sync> {
     pub x0: Float,
     pub x1: Float,
     pub y0: Float,
     pub y1: Float,
     pub k: Float,
-    pub material: Arc<Box<dyn Material>>,
+    pub material: Arc<Box<dyn Material<R = R>>>,
 }
 
-#[derive(Debug)]
-pub struct XZRect {
+pub struct XZRect<R: 'static + Rng + Send + Sync> {
     pub x0: Float,
     pub x1: Float,
     pub z0: Float,
     pub z1: Float,
     pub k: Float,
-    pub material: Arc<Box<dyn Material>>,
+    pub material: Arc<Box<dyn Material<R = R>>>,
 }
 
-#[derive(Debug)]
-pub struct YZRect {
+pub struct YZRect<R: 'static + Rng + Send + Sync> {
     pub y0: Float,
     pub y1: Float,
     pub z0: Float,
     pub z1: Float,
     pub k: Float,
-    pub material: Arc<Box<dyn Material>>,
+    pub material: Arc<Box<dyn Material<R = R>>>,
 }
 
-impl Hittable for XYRect {
+impl<R: Rng + Send + Sync> Hittable for XYRect<R> {
+    type R = R;
+
     #[allow(clippy::many_single_char_names)]
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, _rng: &mut MyRng) -> Option<HitRecord> {
+    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, _rng: &mut R) -> Option<HitRecord<R>> {
         let t = (self.k - ray.origin.z) / ray.direction.z;
         if t < t_min || t > t_max {
             return None;
@@ -79,9 +78,11 @@ impl Hittable for XYRect {
     }
 }
 
-impl Hittable for XZRect {
+impl<R: Rng + Send + Sync> Hittable for XZRect<R> {
+    type R = R;
+
     #[allow(clippy::many_single_char_names)]
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, _rng: &mut MyRng) -> Option<HitRecord> {
+    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, _rng: &mut R) -> Option<HitRecord<R>> {
         let t = (self.k - ray.origin.y) / ray.direction.y;
         if t < t_min || t > t_max {
             return None;
@@ -116,7 +117,7 @@ impl Hittable for XZRect {
         })
     }
 
-    fn pdf_value(&self, origin: Point3<Float>, v: Vector3<Float>, rng: &mut MyRng) -> Float {
+    fn pdf_value(&self, origin: Point3<Float>, v: Vector3<Float>, rng: &mut R) -> Float {
         if let Some(hit_record) = self.hit(
             &Ray {
                 origin,
@@ -137,7 +138,7 @@ impl Hittable for XZRect {
         }
     }
 
-    fn random(&self, origin: Point3<Float>, rng: &mut MyRng) -> Vector3<Float> {
+    fn random(&self, origin: Point3<Float>, rng: &mut R) -> Vector3<Float> {
         let random_point = vec3(
             rng.gen_range(self.x0..self.x1),
             self.k,
@@ -147,9 +148,11 @@ impl Hittable for XZRect {
     }
 }
 
-impl Hittable for YZRect {
+impl<R: Rng + Send + Sync> Hittable for YZRect<R> {
+    type R = R;
+
     #[allow(clippy::many_single_char_names)]
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, _rng: &mut MyRng) -> Option<HitRecord> {
+    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, _rng: &mut R) -> Option<HitRecord<R>> {
         let t = (self.k - ray.origin.x) / ray.direction.x;
         if t < t_min || t > t_max {
             return None;
