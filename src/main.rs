@@ -804,28 +804,20 @@ fn main() {
 
     let null_mat: Arc<Box<dyn Material>> = Arc::new(Box::new(()));
 
-    let mut lights: Option<Vec<Box<dyn Hittable>>> = Some(vec![
-        Box::new(XZRect {
-            x0: 213.0,
-            x1: 343.0,
-            z0: 227.0,
-            z1: 332.0,
-            k: 554.0,
-            material: null_mat.clone(),
-        }),
-        Box::new(Sphere {
-            center: point3(190.0, 90.0, 190.0),
-            radius: 90.0,
-            material: null_mat.clone(),
-        }),
-    ]);
-
-    let (world, background, look_from, look_at, vfov, aperture) = match 5 {
+    let (world, lights, background, look_from, look_at, vfov, aperture): (
+        _,
+        Option<Vec<Box<dyn Hittable>>>,
+        _,
+        _,
+        _,
+        _,
+        _,
+    ) = match 5 {
         0 => {
             samples_per_pixel = 500;
-            lights = None;
             (
                 random_scene(&mut rng),
+                None,
                 Color(vec3(0.70, 0.80, 1.00)),
                 point3(13.0, 2.0, 3.0),
                 point3(0.0, 0.0, 0.0),
@@ -833,44 +825,38 @@ fn main() {
                 0.1,
             )
         }
-        1 => {
-            lights = None;
-            (
-                two_spheres(&mut rng),
-                Color(vec3(0.70, 0.80, 1.00)),
-                point3(13.0, 2.0, 3.0),
-                point3(0.0, 0.0, 0.0),
-                Deg(20.0),
-                0.0,
-            )
-        }
-        2 => {
-            lights = None;
-            (
-                two_perlin_spheres(&mut rng),
-                Color(vec3(0.70, 0.80, 1.00)),
-                point3(13.0, 2.0, 3.0),
-                point3(0.0, 0.0, 0.0),
-                Deg(20.0),
-                0.0,
-            )
-        }
-        3 => {
-            lights = None;
-            (
-                earth(&mut rng),
-                Color(vec3(0.70, 0.80, 1.00)),
-                point3(13.0, 2.0, 3.0),
-                point3(0.0, 0.0, 0.0),
-                Deg(20.0),
-                0.0,
-            )
-        }
+        1 => (
+            two_spheres(&mut rng),
+            None,
+            Color(vec3(0.70, 0.80, 1.00)),
+            point3(13.0, 2.0, 3.0),
+            point3(0.0, 0.0, 0.0),
+            Deg(20.0),
+            0.0,
+        ),
+        2 => (
+            two_perlin_spheres(&mut rng),
+            None,
+            Color(vec3(0.70, 0.80, 1.00)),
+            point3(13.0, 2.0, 3.0),
+            point3(0.0, 0.0, 0.0),
+            Deg(20.0),
+            0.0,
+        ),
+        3 => (
+            earth(&mut rng),
+            None,
+            Color(vec3(0.70, 0.80, 1.00)),
+            point3(13.0, 2.0, 3.0),
+            point3(0.0, 0.0, 0.0),
+            Deg(20.0),
+            0.0,
+        ),
         4 => {
             samples_per_pixel = 400;
-            lights = None;
             (
                 simple_light(&mut rng),
+                None,
                 Color(vec3(0.0, 0.0, 0.0)),
                 point3(26.0, 3.0, 6.0),
                 point3(0.0, 2.0, 0.0),
@@ -882,23 +868,23 @@ fn main() {
             aspect_ratio = 1.0;
             image_width = 600;
             samples_per_pixel = 100;
-            lights = Some(vec![
-                Box::new(XZRect {
-                    x0: 213.0,
-                    x1: 343.0,
-                    z0: 227.0,
-                    z1: 332.0,
-                    k: 554.0,
-                    material: null_mat.clone(),
-                }),
-                Box::new(Sphere {
-                    center: point3(190.0, 90.0, 190.0),
-                    radius: 90.0,
-                    material: null_mat.clone(),
-                }),
-            ]);
             (
                 cornel_box(&mut rng),
+                Some(vec![
+                    Box::new(XZRect {
+                        x0: 213.0,
+                        x1: 343.0,
+                        z0: 227.0,
+                        z1: 332.0,
+                        k: 554.0,
+                        material: null_mat.clone(),
+                    }),
+                    Box::new(Sphere {
+                        center: point3(190.0, 90.0, 190.0),
+                        radius: 90.0,
+                        material: null_mat.clone(),
+                    }),
+                ]),
                 Color(vec3(0.0, 0.0, 0.0)),
                 point3(278.0, 278.0, -800.0),
                 point3(278.0, 278.0, 0.0),
@@ -910,16 +896,16 @@ fn main() {
             aspect_ratio = 1.0;
             image_width = 600;
             samples_per_pixel = 200;
-            lights = Some(vec![Box::new(XZRect {
-                x0: 113.0,
-                x1: 443.0,
-                z0: 127.0,
-                z1: 432.0,
-                k: 554.0,
-                material: null_mat,
-            })]);
             (
                 cornel_smoke(&mut rng),
+                Some(vec![Box::new(XZRect {
+                    x0: 113.0,
+                    x1: 443.0,
+                    z0: 127.0,
+                    z1: 432.0,
+                    k: 554.0,
+                    material: null_mat,
+                })]),
                 Color(vec3(0.0, 0.0, 0.0)),
                 point3(278.0, 278.0, -800.0),
                 point3(278.0, 278.0, 0.0),
@@ -931,16 +917,16 @@ fn main() {
             aspect_ratio = 1.0;
             image_width = 800;
             samples_per_pixel = 10000;
-            lights = Some(vec![Box::new(XZRect {
-                x0: 123.0,
-                x1: 423.0,
-                z0: 147.0,
-                z1: 412.0,
-                k: 554.0,
-                material: null_mat,
-            })]);
             (
                 final_scene(&mut rng),
+                Some(vec![Box::new(XZRect {
+                    x0: 123.0,
+                    x1: 423.0,
+                    z0: 147.0,
+                    z1: 412.0,
+                    k: 554.0,
+                    material: null_mat,
+                })]),
                 Color(vec3(0.0, 0.0, 0.0)),
                 point3(478.0, 278.0, -600.0),
                 point3(278.0, 278.0, 0.0),
