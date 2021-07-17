@@ -80,7 +80,7 @@ impl<T: Hittable> Hittable for ConstantMedium<T> {
 
                 rec1.t = rec1.t.max(0.0);
 
-                let ray_length = InnerSpace::magnitude(ray.direction);
+                let ray_length = ray.direction.magnitude();
                 let distance_inside_boundary = (rec2.t - rec1.t) * ray_length;
                 let hit_distance = self.neg_inv_density * rng.gen::<Float>().ln();
 
