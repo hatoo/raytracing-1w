@@ -10,7 +10,7 @@ use cgmath::{dot, vec3, InnerSpace, Point3, Vector3};
 use num_traits::FloatConst;
 use rand::Rng;
 
-use crate::{color::Color, hittable::HitRecord, math::random_vec3_in_unit_sphere, ray::Ray, MyRng};
+use crate::{color::Color, hittable::HitRecord, math::random_in_unit_sphere, ray::Ray, MyRng};
 
 pub enum ScatterKind {
     Spacular(Ray),
@@ -100,7 +100,7 @@ impl Material for Metal {
         let reflected = reflect(ray.direction.normalize(), hit_record.normal);
         let spacular_ray = Ray {
             origin: hit_record.position,
-            direction: reflected + self.fuzz * random_vec3_in_unit_sphere(rng),
+            direction: reflected + self.fuzz * random_in_unit_sphere(rng),
             time: ray.time,
         };
 

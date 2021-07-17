@@ -6,7 +6,7 @@ use rand::Rng;
 use crate::{
     hittable::{HitRecord, Hittable},
     material::{Material, Scatter, ScatterKind},
-    math::random_vec3_in_unit_sphere,
+    math::random_in_unit_sphere,
     ray::Ray,
     texture::Texture,
     Float, MyRng,
@@ -42,7 +42,7 @@ impl Material for Isotropic {
         Some(Scatter {
             kind: ScatterKind::Spacular(Ray {
                 origin: hit_record.position,
-                direction: random_vec3_in_unit_sphere(rng),
+                direction: random_in_unit_sphere(rng),
                 time: ray.time,
             }),
             attenuation,

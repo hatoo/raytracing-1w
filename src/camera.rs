@@ -1,7 +1,7 @@
 use cgmath::{Angle, Deg, EuclideanSpace, InnerSpace, Point3, Rad, Vector3};
 use rand::Rng;
 
-use crate::{math::random_vec3_in_unit_disk, ray::Ray, Float};
+use crate::{math::random_in_unit_disk, ray::Ray, Float};
 
 #[derive(Clone, Debug)]
 pub struct Camera {
@@ -59,7 +59,7 @@ impl Camera {
     }
 
     pub fn get_ray(&self, s: Float, t: Float, rng: &mut impl Rng) -> Ray {
-        let rd = self.lens_radius * random_vec3_in_unit_disk(rng);
+        let rd = self.lens_radius * random_in_unit_disk(rng);
         let offset = self.u * rd.x + self.v * rd.y;
 
         Ray {

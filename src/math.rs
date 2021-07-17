@@ -3,7 +3,7 @@ use cgmath::{dot, vec3, InnerSpace, Point3, Vector3};
 use num_traits::float::FloatConst;
 use rand::prelude::*;
 
-pub fn random_vec3_in_unit_sphere(rng: &mut impl Rng) -> Vector3<Float> {
+pub fn random_in_unit_sphere(rng: &mut impl Rng) -> Vector3<Float> {
     loop {
         let v = vec3(
             rng.gen_range(-1.0..1.0),
@@ -18,8 +18,8 @@ pub fn random_vec3_in_unit_sphere(rng: &mut impl Rng) -> Vector3<Float> {
 }
 
 #[allow(dead_code)]
-pub fn random_vec3_in_hemisphere(normal: Vector3<Float>, rng: &mut impl Rng) -> Vector3<Float> {
-    let v = random_vec3_in_unit_sphere(rng).normalize();
+pub fn random_in_hemisphere(normal: Vector3<Float>, rng: &mut impl Rng) -> Vector3<Float> {
+    let v = random_in_unit_sphere(rng).normalize();
     if dot(normal, v) > 0.0 {
         v
     } else {
@@ -27,7 +27,7 @@ pub fn random_vec3_in_hemisphere(normal: Vector3<Float>, rng: &mut impl Rng) -> 
     }
 }
 
-pub fn random_vec3_in_unit_disk(rng: &mut impl Rng) -> Vector3<Float> {
+pub fn random_in_unit_disk(rng: &mut impl Rng) -> Vector3<Float> {
     loop {
         let p = vec3(rng.gen_range(-1.0..1.0), rng.gen_range(-1.0..1.0), 0.0);
         if p.magnitude2() < 1.0 {
