@@ -4,7 +4,7 @@ My codes for [Ray Tracing in One Weekend Book Series](https://github.com/RayTrac
 
 # Ray Tracing in One Weekend
 
-On `week-end` brnach.
+On `week-end` branch.
 
 ![One Weekend](one_weekend.png)
 
