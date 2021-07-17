@@ -670,14 +670,14 @@ fn final_scene(rng: &mut impl Rng) -> BVHNode {
         },
     }));
 
-    objects.push(Box::new(XZRect {
+    objects.push(Box::new(FlipFace(XZRect {
         x0: 123.0,
         x1: 423.0,
         z0: 147.0,
         z1: 412.0,
         k: 554.0,
         material: light,
-    }));
+    })));
 
     let center1 = point3(400.0, 400.0, 200.0);
     let center2 = center1 + vec3(30.0, 0.0, 0.0);
@@ -931,6 +931,14 @@ fn main() {
             aspect_ratio = 1.0;
             image_width = 800;
             samples_per_pixel = 10000;
+            lights = Some(vec![Box::new(XZRect {
+                x0: 123.0,
+                x1: 423.0,
+                z0: 147.0,
+                z1: 412.0,
+                k: 554.0,
+                material: null_mat,
+            })]);
             (
                 final_scene(&mut rng),
                 Color(vec3(0.0, 0.0, 0.0)),
