@@ -816,7 +816,7 @@ fn main() {
         Box::new(Sphere {
             center: point3(190.0, 90.0, 190.0),
             radius: 90.0,
-            material: null_mat,
+            material: null_mat.clone(),
         }),
     ]);
 
@@ -868,6 +868,7 @@ fn main() {
         }
         4 => {
             samples_per_pixel = 400;
+            lights = None;
             (
                 simple_light(&mut rng),
                 Color(vec3(0.0, 0.0, 0.0)),
