@@ -791,7 +791,7 @@ fn main() {
         5 => {
             aspect_ratio = 1.0;
             image_width = 600;
-            samples_per_pixel = 10000;
+            samples_per_pixel = 100;
             (
                 cornel_box(&mut rng),
                 Color(vec3(0.0, 0.0, 0.0)),
