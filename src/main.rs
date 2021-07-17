@@ -833,14 +833,17 @@ fn main() {
                 0.1,
             )
         }
-        1 => (
-            two_spheres(&mut rng),
-            Color(vec3(0.70, 0.80, 1.00)),
-            point3(13.0, 2.0, 3.0),
-            point3(0.0, 0.0, 0.0),
-            Deg(20.0),
-            0.0,
-        ),
+        1 => {
+            lights = None;
+            (
+                two_spheres(&mut rng),
+                Color(vec3(0.70, 0.80, 1.00)),
+                point3(13.0, 2.0, 3.0),
+                point3(0.0, 0.0, 0.0),
+                Deg(20.0),
+                0.0,
+            )
+        }
         2 => (
             two_perlin_spheres(&mut rng),
             Color(vec3(0.70, 0.80, 1.00)),
