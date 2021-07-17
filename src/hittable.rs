@@ -63,10 +63,10 @@ pub struct FlipFace<T>(pub T);
 pub trait Hittable: Send + Sync {
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rng: &mut MyRng) -> Option<HitRecord>;
     fn bounding_box(&self, time0: Float, time1: Float) -> Option<AABB>;
-    fn pdf_value(&self, _o: Point3<Float>, _v: Vector3<Float>, _rng: &mut MyRng) -> Float {
+    fn pdf_value(&self, _origin: Point3<Float>, _v: Vector3<Float>, _rng: &mut MyRng) -> Float {
         0.0
     }
-    fn random(&self, _o: Vector3<Float>, _rng: &mut MyRng) -> Vector3<Float> {
+    fn random(&self, _origin: Point3<Float>, _rng: &mut MyRng) -> Vector3<Float> {
         vec3(1.0, 0.0, 0.0)
     }
 }
@@ -84,7 +84,7 @@ impl<T: Hittable + ?Sized> Hittable for &T {
         (*self).pdf_value(o, v, rng)
     }
 
-    fn random(&self, o: Vector3<Float>, rng: &mut MyRng) -> Vector3<Float> {
+    fn random(&self, o: Point3<Float>, rng: &mut MyRng) -> Vector3<Float> {
         (*self).random(o, rng)
     }
 }
@@ -102,7 +102,7 @@ impl<T: Hittable + ?Sized> Hittable for Box<T> {
         self.as_ref().pdf_value(o, v, rng)
     }
 
-    fn random(&self, o: Vector3<Float>, rng: &mut MyRng) -> Vector3<Float> {
+    fn random(&self, o: Point3<Float>, rng: &mut MyRng) -> Vector3<Float> {
         self.as_ref().random(o, rng)
     }
 }
@@ -149,7 +149,7 @@ impl<T: Hittable> Hittable for [T] {
             .sum()
     }
 
-    fn random(&self, o: Vector3<Float>, rng: &mut MyRng) -> Vector3<Float> {
+    fn random(&self, o: Point3<Float>, rng: &mut MyRng) -> Vector3<Float> {
         self.choose(rng).unwrap().random(o, rng)
     }
 }

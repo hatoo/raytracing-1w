@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use cgmath::{dot, point3, vec3, InnerSpace, Point3, Vector3};
+use cgmath::{dot, point3, vec3, EuclideanSpace, InnerSpace, Point3, Vector3};
 use rand::Rng;
 
 use crate::{
@@ -137,13 +137,13 @@ impl Hittable for XZRect {
         }
     }
 
-    fn random(&self, origin: Vector3<Float>, rng: &mut MyRng) -> Vector3<Float> {
+    fn random(&self, origin: Point3<Float>, rng: &mut MyRng) -> Vector3<Float> {
         let random_point = vec3(
             rng.gen_range(self.x0..self.x1),
             self.k,
             rng.gen_range(self.z0..self.z1),
         );
-        random_point - origin
+        random_point - origin.to_vec()
     }
 }
 

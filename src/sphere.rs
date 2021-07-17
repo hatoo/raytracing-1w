@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use cgmath::{dot, prelude::*, vec3, Point3};
+use cgmath::{dot, prelude::*, vec3, Point3, Vector3};
 use num_traits::FloatConst;
 
 use crate::{
@@ -69,7 +69,7 @@ impl Hittable for Sphere {
         })
     }
 
-    fn pdf_value(&self, o: Point3<Float>, v: cgmath::Vector3<Float>, rng: &mut MyRng) -> Float {
+    fn pdf_value(&self, o: Point3<Float>, v: Vector3<Float>, rng: &mut MyRng) -> Float {
         self.hit(
             &Ray {
                 origin: o,
@@ -89,8 +89,8 @@ impl Hittable for Sphere {
         .unwrap_or(0.0)
     }
 
-    fn random(&self, o: cgmath::Vector3<Float>, rng: &mut MyRng) -> cgmath::Vector3<Float> {
-        let direction = (self.center - o).to_vec();
+    fn random(&self, o: Point3<Float>, rng: &mut MyRng) -> Vector3<Float> {
+        let direction = self.center - o;
         let distance_squared = direction.magnitude2();
 
         let uvw = Onb::from_w(direction);

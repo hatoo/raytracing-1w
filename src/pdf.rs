@@ -1,4 +1,4 @@
-use cgmath::{dot, EuclideanSpace, InnerSpace, Point3, Vector3};
+use cgmath::{dot, InnerSpace, Point3, Vector3};
 use rand::Rng;
 
 use crate::{hittable::Hittable, math::random_cosine_direction, onb::Onb, Float, MyRng};
@@ -50,7 +50,7 @@ impl<T: Hittable> Pdf for HittablePdf<T> {
     }
 
     fn generate(&self, rng: &mut MyRng) -> Vector3<Float> {
-        self.hittable.random(self.o.to_vec(), rng)
+        self.hittable.random(self.o, rng)
     }
 }
 
