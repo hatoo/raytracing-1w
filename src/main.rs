@@ -118,12 +118,12 @@ fn ray_color<H: Hittable + ?Sized, L: Hittable + ?Sized>(
 fn random_scene(rng: &mut impl Rng) -> BVHNode {
     let ground_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
         albedo: CheckerTexture {
-            even: Box::new(SolidColor {
+            even: SolidColor {
                 color_value: Color(vec3(0.2, 0.3, 0.1)),
-            }),
-            odd: Box::new(SolidColor {
+            },
+            odd: SolidColor {
                 color_value: Color(vec3(0.9, 0.9, 0.9)),
-            }),
+            },
         },
     }));
 
@@ -223,12 +223,12 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
 fn two_spheres(rng: &mut impl Rng) -> BVHNode {
     let checker_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
         albedo: CheckerTexture {
-            even: Box::new(SolidColor {
+            even: SolidColor {
                 color_value: Color(vec3(0.2, 0.3, 0.1)),
-            }),
-            odd: Box::new(SolidColor {
+            },
+            odd: SolidColor {
                 color_value: Color(vec3(0.9, 0.9, 0.9)),
-            }),
+            },
         },
     }));
 
