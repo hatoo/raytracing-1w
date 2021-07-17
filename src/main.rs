@@ -115,6 +115,80 @@ fn ray_color<H: Hittable + ?Sized, L: Hittable + ?Sized>(
     }
 }
 
+fn ray_color_without_light_objects<H: Hittable + ?Sized>(
+    ray: &Ray,
+    background: Color,
+    world: &H,
+    depth: usize,
+    rng: &mut MyRng,
+) -> Color {
+    if depth == 0 {
+        return Color(vec3(0.0, 0.0, 0.0));
+    }
+    if let Some(hit_record) = world.hit(ray, 0.001, Float::INFINITY, rng) {
+        let emitted = hit_record.material.emitted(
+            ray,
+            &hit_record,
+            hit_record.u,
+            hit_record.v,
+            hit_record.position,
+        );
+
+        if let Some(Scatter { attenuation, kind }) =
+            hit_record.material.scatter(ray, &hit_record, rng)
+        {
+            match kind {
+                ScatterKind::Pdf(pdf) => {
+                    let scatterd = Ray {
+                        origin: hit_record.position,
+                        direction: pdf.generate(rng),
+                        time: hit_record.t,
+                    };
+
+                    let pdf_value = pdf.value(scatterd.direction, rng);
+
+                    Color(
+                        emitted.0
+                            + (attenuation.0
+                                * hit_record.material.scattering_pdf(
+                                    ray,
+                                    &hit_record,
+                                    &scatterd,
+                                    rng,
+                                ))
+                            .mul_element_wise(
+                                ray_color_without_light_objects(
+                                    &scatterd,
+                                    background,
+                                    world,
+                                    depth - 1,
+                                    rng,
+                                )
+                                .0 / pdf_value,
+                            ),
+                    )
+                }
+                ScatterKind::Spacular(specular_ray) => Color(
+                    attenuation.0.mul_element_wise(
+                        ray_color_without_light_objects(
+                            &specular_ray,
+                            background,
+                            world,
+                            depth - 1,
+                            rng,
+                        )
+                        .0,
+                    ),
+                ),
+            }
+        } else {
+            emitted
+        }
+    } else {
+        background
+    }
+}
+
 fn random_scene(rng: &mut impl Rng) -> BVHNode {
     let ground_material: Arc<Box<dyn Material>> = Arc::new(Box::new(Lambertian {
         albedo: CheckerTexture {
@@ -142,7 +216,7 @@ fn random_scene(rng: &mut impl Rng) -> BVHNode {
                 b as Float + 0.9 * rng.gen::<Float>(),
             );
 
-            if InnerSpace::magnitude(center - point3(4.0, 0.2, 0.0)) > 0.9 {
+            if (center - point3(4.0, 0.2, 0.0)).magnitude() > 0.9 {
                 let hittable: Box<dyn Hittable> = match choose_mat {
                     x if x < 0.8 => {
                         let albedo =
@@ -730,7 +804,7 @@ fn main() {
 
     let null_mat: Arc<Box<dyn Material>> = Arc::new(Box::new(()));
 
-    let lights: &[Box<dyn Hittable>] = &[
+    let mut lights: Option<Vec<Box<dyn Hittable>>> = Some(vec![
         Box::new(XZRect {
             x0: 213.0,
             x1: 343.0,
@@ -744,17 +818,21 @@ fn main() {
             radius: 90.0,
             material: null_mat,
         }),
-    ];
+    ]);
 
     let (world, background, look_from, look_at, vfov, aperture) = match 5 {
-        0 => (
-            random_scene(&mut rng),
-            Color(vec3(0.70, 0.80, 1.00)),
-            point3(13.0, 2.0, 3.0),
-            point3(0.0, 0.0, 0.0),
-            Deg(20.0),
-            0.1,
-        ),
+        0 => {
+            samples_per_pixel = 500;
+            lights = None;
+            (
+                random_scene(&mut rng),
+                Color(vec3(0.70, 0.80, 1.00)),
+                point3(13.0, 2.0, 3.0),
+                point3(0.0, 0.0, 0.0),
+                Deg(20.0),
+                0.1,
+            )
+        }
         1 => (
             two_spheres(&mut rng),
             Color(vec3(0.70, 0.80, 1.00)),
@@ -866,8 +944,21 @@ fn main() {
                         let ray = camera.get_ray(u, v, &mut rng);
                         pixel_color = Color(
                             pixel_color.0
-                                + ray_color(&ray, background, &world, lights, MAX_DEPTH, &mut rng)
-                                    .0,
+                                + if let Some(lights) = lights.as_ref() {
+                                    ray_color(
+                                        &ray,
+                                        background,
+                                        &world,
+                                        lights.as_slice(),
+                                        MAX_DEPTH,
+                                        &mut rng,
+                                    )
+                                } else {
+                                    ray_color_without_light_objects(
+                                        &ray, background, &world, MAX_DEPTH, &mut rng,
+                                    )
+                                }
+                                .0,
                         );
                     }
 
