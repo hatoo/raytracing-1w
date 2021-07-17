@@ -532,7 +532,7 @@ fn cornel_smoke(rng: &mut impl Rng) -> BVHNode {
 
     let light: Arc<Box<dyn Material>> = Arc::new(Box::new(DiffuseLight {
         emit: SolidColor {
-            color_value: Color(vec3(15.0, 15.0, 15.0)),
+            color_value: Color(vec3(7.0, 7.0, 7.0)),
         },
     }));
 
@@ -593,14 +593,14 @@ fn cornel_smoke(rng: &mut impl Rng) -> BVHNode {
             k: 0.0,
             material: red,
         }),
-        Box::new(XZRect {
-            x0: 213.0,
-            x1: 343.0,
-            z0: 227.0,
-            z1: 332.0,
+        Box::new(FlipFace(XZRect {
+            x0: 113.0,
+            x1: 443.0,
+            z0: 127.0,
+            z1: 432.0,
             k: 554.0,
             material: light,
-        }),
+        })),
         Box::new(XZRect {
             x0: 0.0,
             x1: 555.0,
@@ -882,6 +882,21 @@ fn main() {
             aspect_ratio = 1.0;
             image_width = 600;
             samples_per_pixel = 100;
+            lights = Some(vec![
+                Box::new(XZRect {
+                    x0: 213.0,
+                    x1: 343.0,
+                    z0: 227.0,
+                    z1: 332.0,
+                    k: 554.0,
+                    material: null_mat.clone(),
+                }),
+                Box::new(Sphere {
+                    center: point3(190.0, 90.0, 190.0),
+                    radius: 90.0,
+                    material: null_mat.clone(),
+                }),
+            ]);
             (
                 cornel_box(&mut rng),
                 Color(vec3(0.0, 0.0, 0.0)),
@@ -895,6 +910,14 @@ fn main() {
             aspect_ratio = 1.0;
             image_width = 600;
             samples_per_pixel = 200;
+            lights = Some(vec![Box::new(XZRect {
+                x0: 113.0,
+                x1: 443.0,
+                z0: 127.0,
+                z1: 432.0,
+                k: 554.0,
+                material: null_mat,
+            })]);
             (
                 cornel_smoke(&mut rng),
                 Color(vec3(0.0, 0.0, 0.0)),
