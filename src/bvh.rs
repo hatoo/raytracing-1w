@@ -84,12 +84,7 @@ impl BVHNode {
                 let axis = rng.gen_range(0..=2);
                 objects
                     .sort_by_key(|o| FloatOrd(o.bounding_box(time0, time1).unwrap().minimum[axis]));
-                let mut right = Vec::with_capacity(len / 2);
-                for _ in 0..len / 2 {
-                    right.push(objects.pop().unwrap());
-                }
-
-                right.reverse();
+                let right = objects.split_off(len / 2);
 
                 let left = objects;
                 let right = right;
