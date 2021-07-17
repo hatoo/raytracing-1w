@@ -42,6 +42,7 @@ pub struct YZRect {
 }
 
 impl Hittable for XYRect {
+    #[allow(clippy::many_single_char_names)]
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, _rng: &mut MyRng) -> Option<HitRecord> {
         let t = (self.k - ray.origin.z) / ray.direction.z;
         if t < t_min || t > t_max {
@@ -79,6 +80,7 @@ impl Hittable for XYRect {
 }
 
 impl Hittable for XZRect {
+    #[allow(clippy::many_single_char_names)]
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, _rng: &mut MyRng) -> Option<HitRecord> {
         let t = (self.k - ray.origin.y) / ray.direction.y;
         if t < t_min || t > t_max {
@@ -146,6 +148,7 @@ impl Hittable for XZRect {
 }
 
 impl Hittable for YZRect {
+    #[allow(clippy::many_single_char_names)]
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, _rng: &mut MyRng) -> Option<HitRecord> {
         let t = (self.k - ray.origin.x) / ray.direction.x;
         if t < t_min || t > t_max {

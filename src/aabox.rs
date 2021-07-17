@@ -72,7 +72,7 @@ impl AABox {
                 z0: p0.z,
                 z1: p1.z,
                 k: p0.x,
-                material: material,
+                material,
             }),
         ];
 

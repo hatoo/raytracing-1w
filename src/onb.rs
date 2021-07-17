@@ -9,6 +9,7 @@ pub struct Onb {
 }
 
 impl Onb {
+    #[allow(clippy::many_single_char_names)]
     pub fn from_w(n: Vector3<Float>) -> Self {
         let w = n.normalize();
         let a = if w.x.abs() > 0.9 {

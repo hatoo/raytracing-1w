@@ -20,6 +20,7 @@ pub struct Sphere {
 }
 
 impl Hittable for Sphere {
+    #[allow(clippy::suspicious_operation_groupings)]
     fn hit(
         &self,
         ray: &crate::ray::Ray,
@@ -28,9 +29,9 @@ impl Hittable for Sphere {
         _rng: &mut MyRng,
     ) -> Option<HitRecord> {
         let oc = ray.origin - self.center;
-        let a = InnerSpace::magnitude2(ray.direction);
+        let a = ray.direction.magnitude2();
         let half_b = dot(oc, ray.direction);
-        let c = InnerSpace::magnitude2(oc) - self.radius * self.radius;
+        let c = oc.magnitude2() - self.radius * self.radius;
 
         let discriminant = half_b * half_b - a * c;
         if discriminant < 0.0 {

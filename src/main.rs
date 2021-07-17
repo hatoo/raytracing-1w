@@ -68,7 +68,7 @@ fn ray_color<H: Hittable + ?Sized, L: Hittable + ?Sized>(
             hit_record.position,
         );
 
-        return if let Some(Scatter { attenuation, kind }) =
+        if let Some(Scatter { attenuation, kind }) =
             hit_record.material.scatter(ray, &hit_record, rng)
         {
             match kind {
@@ -109,7 +109,7 @@ fn ray_color<H: Hittable + ?Sized, L: Hittable + ?Sized>(
             }
         } else {
             emitted
-        };
+        }
     } else {
         background
     }
