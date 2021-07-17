@@ -6,10 +6,11 @@ use rand::Rng;
 use crate::{
     hittable::{HitRecord, Hittable},
     material::{Material, Scatter},
-    math::random_vec3_in_unit_sphere,
+    // math::random_vec3_in_unit_sphere,
     ray::Ray,
     texture::Texture,
-    Float, MyRng,
+    Float,
+    MyRng,
 };
 
 pub struct ConstantMedium<T> {
@@ -34,7 +35,8 @@ pub struct Isotropic {
 }
 
 impl Material for Isotropic {
-    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
+    fn scatter(&self, _ray: &Ray, _hit_record: &HitRecord, _rng: &mut MyRng) -> Option<Scatter> {
+        /*
         let scattered = Ray {
             origin: hit_record.position,
             direction: random_vec3_in_unit_sphere(rng),
@@ -43,6 +45,7 @@ impl Material for Isotropic {
         let color = self
             .albedo
             .value(hit_record.u, hit_record.v, hit_record.position);
+            */
 
         todo!()
         /*

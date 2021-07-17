@@ -23,7 +23,7 @@ pub struct Scatter {
 }
 
 pub trait Material: Debug + Send + Sync {
-    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, rng: &mut MyRng) -> Option<Scatter> {
+    fn scatter(&self, _ray: &Ray, _hit_record: &HitRecord, _rng: &mut MyRng) -> Option<Scatter> {
         None
     }
 
@@ -167,7 +167,7 @@ impl<T: Texture> Material for DiffuseLight<T> {
 
     fn emitted(
         &self,
-        ray_in: &Ray,
+        _ray_in: &Ray,
         hit_record: &HitRecord,
         u: Float,
         v: Float,

@@ -360,6 +360,7 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
         offset: vec3(265.0, 0.0, 295.0),
     });
 
+    /*
     let box2 = AABox::new(
         point3(0.0, 0.0, 0.0),
         point3(165.0, 165.0, 165.0),
@@ -371,6 +372,7 @@ fn cornel_box(rng: &mut impl Rng) -> BVHNode {
         hittable: box2,
         offset: vec3(130.0, 0.0, 65.0),
     });
+    */
 
     let grass: Arc<Box<dyn Material>> = Arc::new(Box::new(Dielectric { ir: 1.5 }));
 
